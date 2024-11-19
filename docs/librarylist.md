@@ -22,4 +22,3 @@ The following reported errors (No such file or directory) and were addressed by 
 ||||||
 |/*BOF COMPASS*/|||||  
 |#include <QMC5883LCompass.h>|MPrograms|https://github.com/mprograms/QMC5883LCompass|||  
-|---------	|--------	|------	|---	|---	|
