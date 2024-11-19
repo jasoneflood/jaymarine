@@ -21,5 +21,5 @@ The following reported errors (No such file or directory) and were addressed by 
 |#include <esp32-hal-ledc.h>||Appears to be built-in or carried by one of the other libraries|||  
 ||||||
 |/*BOF COMPASS*/|||||  
-|#include <QMC5883LCompass.h>|MPrograms|ttps://github.com/mprograms/QMC5883LCompass|||  
+|#include <QMC5883LCompass.h>|MPrograms|https://github.com/mprograms/QMC5883LCompass|||  
 |---------	|--------	|------	|---	|---	|
