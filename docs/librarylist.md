@@ -5,11 +5,11 @@ The following did not report any issues, so may be installed by default
 #include <WiFi.h>               // default library?
 
 
-The following reported errors (No such file or directory) and were addressed by installing the indicted libraries\
-#include <AsyncTCP.h>         // dvarell, https://github.com/dvarrel/AsyncTCP\
-#include <AsyncTCP.h>           // mathieucarbou, https://github.com/mathieucarbou/AsyncTCP\
-#include <ESPAsyncWebServer.h>  // mathieucarbou,, https://github.com/mathieucarbou/ESPAsyncWebServer\
-#include <HTTPClient.h>         // ?? included with above libraries?\
+The following reported errors (No such file or directory) and were addressed by installing the indicted libraries  
+#include <AsyncTCP.h>         // dvarell, https://github.com/dvarrel/AsyncTCP  
+#include <AsyncTCP.h>           // mathieucarbou, https://github.com/mathieucarbou/AsyncTCP  
+#include <ESPAsyncWebServer.h>  // mathieucarbou,, https://github.com/mathieucarbou/ESPAsyncWebServer  
+#include <HTTPClient.h>         // ?? included with above libraries?  
 // #include <EEPROM.h>          // replaced by the following\
 #include <Preferences.h>        // Volodymyr Shymanskyy, https://github.com/vshymanskyy/Preferences\
 #include <ArduinoJson.h>        // https://arduinojson.org/?utm_source=meta&utm_medium=library.properties\
