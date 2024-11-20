@@ -1,4 +1,10 @@
-/*************************************************/
+/*************************************/
+// Jason Flood
+// Mark Deegan
+// November 2024
+//
+// style_var code for md_esp_compass
+/*************************************/
 const char style_var[] PROGMEM = R"rawliteral(
   body
   {

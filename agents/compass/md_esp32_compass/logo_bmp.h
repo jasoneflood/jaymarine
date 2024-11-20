@@ -1,3 +1,11 @@
+/*************************************/
+// Jason Flood
+// Mark Deegan
+// November 2024
+// 
+// logo definition file for md_esp32_compass
+/*************************************/
+
 #define LOGO_HEIGHT   16
 #define LOGO_WIDTH    16
 
@@ -20,3 +28,4 @@ static const unsigned char PROGMEM logo_bmp[] =
   0b01110000, 0b01110000,
   0b00000000, 0b00110000 
 };
+/*************************************/

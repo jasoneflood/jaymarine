@@ -1,4 +1,9 @@
-
+/*************************************/
+// Jason Flood
+// Mark Deegan
+// November 2024
+//
+// index.html code for md_esp_compass
 /*************************************/
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
@@ -37,3 +42,4 @@ const char index_html[] PROGMEM = R"rawliteral(
 </body>
 </html>
 )rawliteral";
+/*************************************/

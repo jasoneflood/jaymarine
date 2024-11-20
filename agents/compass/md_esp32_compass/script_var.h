@@ -1,4 +1,10 @@
 /*************************************/
+// Jason Flood
+// Mark Deegan
+// November 2024
+//
+// script_var code for md_esp_compass
+/*************************************/
 const char script_var[] PROGMEM = R"rawliteral(
   let socket = new WebSocket("ws://%SOCKET_SERVER_IP_ADDRESS%:%SOCKET_SERVER_PORT%");
   function testScript()
