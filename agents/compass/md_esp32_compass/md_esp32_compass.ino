@@ -30,7 +30,7 @@
 #include "logo_bmp.h" // snowflake logo
 
 #include "script_var.h"
-#include "stream_html"
+#include "stream_html.h"
 #include "style_var.h"
 #include "index_html.h"
 
