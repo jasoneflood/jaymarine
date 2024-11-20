@@ -25,14 +25,15 @@
 /*BOF COMPASS*/
 #include <QMC5883LCompass.h>    // MPrograms, https://github.com/mprograms/QMC5883LCompass
 
-#include "QMC5833LCompassModes.h" // some defined strings for the compass 
+#include "src/include/QMC5833LCompassModes.h" // some defined strings for the compass 
 
-#include "logo_bmp.h" // snowflake logo
 
-#include "script_var.h"
-#include "stream_html.h"
-#include "style_var.h"
-#include "index_html.h"
+#include "src/include/logo_bmp.h" // snowflake logo
+
+#include "src/include/script_var.h"
+#include "src/include/stream_html.h"
+#include "src/include/style_var.h"
+#include "src/include/index_html.h"
 
 
 #define USE_SERIAL Serial1
