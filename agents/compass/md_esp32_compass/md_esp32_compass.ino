@@ -29,6 +29,12 @@
 
 #include "logo_bmp.h" // snowflake logo
 
+#include "script_var.h"
+#include "stream_html"
+#include "style_var.h"
+#include "index_html.h"
+
+
 #define USE_SERIAL Serial1
 
 /* BOF LED */
