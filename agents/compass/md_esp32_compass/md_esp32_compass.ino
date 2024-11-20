@@ -27,14 +27,12 @@
 
 #include "src/include/QMC5833LCompassModes.h" // some defined strings for the compass 
 
-
 #include "src/include/logo_bmp.h" // snowflake logo
-
 #include "src/include/script_var.h"
 #include "src/include/stream_html.h"
 #include "src/include/style_var.h"
 #include "src/include/index_html.h"
-
+#include "src/include/WiFiDetails.h"
 
 #define USE_SERIAL Serial1
 
@@ -47,9 +45,10 @@ const int bluePin = 14;
 const int resetPin = 26;
 
 
-
+// declare w WebSocketClient
 WebSocketsClient webSocket;
 
+// declare a compass object
 QMC5883LCompass compass;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -61,12 +60,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define NUMFLAKES     10 // Number of snowflakes in the animation example
 
 
-
-
-// WiFi SSID and password are hard-coded here.
-// Later we may want to look at a provisioning mechanism so this is not necessary.
-const char* ssid = "jaymarine";
-const char* ss_password = "passpass";
 
 String WORKER_IP_ADDRESS = "0.0.0.0";
 
