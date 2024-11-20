@@ -34,6 +34,8 @@
 #include "src/include/index_html.h"
 #include "src/include/WiFiDetails.h"
 
+#define DEBUG
+
 #define USE_SERIAL Serial1
 
 /* BOF LED */
@@ -44,6 +46,11 @@ const int bluePin = 14;
 /* BOF Reset Pin */
 const int resetPin = 26;
 
+// Colour table gives 
+// Black, Blue, Green, Cyan,Red,Magenta, Yellow, White
+char colourTable[24] = 
+{0,0,0,0,0,255,0,255,0,0,255,255,255,0,0,255,0,255,255,255,0,255,255,255};
+char colour = 0;
 
 // declare w WebSocketClient
 WebSocketsClient webSocket;
@@ -59,8 +66,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define NUMFLAKES     10 // Number of snowflakes in the animation example
 
-
-
 String WORKER_IP_ADDRESS = "0.0.0.0";
 
 String SOCKET_SERVER_IP_ADDRESS = "0.0.0.0";
@@ -71,6 +76,9 @@ AsyncWebServer server(80); // The HTTP Server is run on port 80
 
 const char* PARAM_INPUT_1 = "setting";
 const char* PARAM_INPUT_2 = "svalue";
+
+
+int resetPinState;
 
 uint addr = 0;
 
@@ -383,8 +391,8 @@ void setup()
     setColor(0, 0, 0); // Green
     Serial.print(".");
     j = j+1;
-    if(j == allowedConnectTime)
-    { // begin if block for j == allowedConnectTime
+    if(j >= allowedConnectTime)
+    { // begin if block for j >= allowedConnectTime
       /*basically at this point the wifi is not connecting, so moving towards a default hotspot*/
       Serial.println("Unable to connect to configured wifi - moving to reserve connectivity");
       Serial.println("Will try to connect to SSID: ");
@@ -582,37 +590,39 @@ void sensor_data()
 /************************************************/
 int getCompassReading()
 {
-    int x_value;
-   int y_value;
-   int z_value;
-   int azimuth;  // 0° - 359°
-   byte bearing; // 0 - 15 (N, NNE, NE, ENE, E, ...)
-   char direction[strlen("NNE") + 1];
-   char buffer[strlen("X=-99999 | Y=-99999 | Z=-99999 | A=259° | B=15 | D=NNE") + 1]; 
-   
-   compass.read(); // Read compass values via I2C
+  int x_value;
+  int y_value;
+  int z_value;
+  int azimuth;  // 0° - 359°
+  byte bearing; // 0 - 15 (N, NNE, NE, ENE, E, ...)
 
-   x_value   = compass.getX();
-   y_value   = compass.getY();
-   z_value   = compass.getZ();
-   azimuth   = compass.getAzimuth(); // Calculated from X and Y value 
-   bearing   = compass.getBearing(azimuth);
+  char direction[strlen("NNE") + 1];
+  char buffer[strlen("X=-99999 | Y=-99999 | Z=-99999 | A=259° | B=15 | D=NNE") + 1]; 
    
-   compass.getDirection(direction, azimuth);
-   direction[3] = '\0';
-/*
-   sprintf(buffer,
+  compass.read(); // Read compass values via I2C
+
+  x_value   = compass.getX();
+  y_value   = compass.getY();
+  z_value   = compass.getZ();
+  azimuth   = compass.getAzimuth(); // Calculated from X and Y value 
+  
+  #ifdef DEBUG
+  bearing   = compass.getBearing(azimuth);
+  compass.getDirection(direction, azimuth);
+  direction[3] = '\0';
+  sprintf(buffer,
            "X=%6d | Y=%6d | Z=%6d | A=%3d° | B=%02hu | %s",
            x_value,
            y_value,
            z_value,
            azimuth,
            bearing,
-           direction                                           );
-   Serial.println(buffer);
-*/
+           direction);
+  Serial.println(buffer);
   
-   return azimuth;
+  #endif
+
+  return azimuth;
 }
 /************************************************/
 
@@ -621,10 +631,12 @@ void loop()
 { // begin Arduino loop 
   webSocket.loop();
 
-  int pinState = digitalRead(resetPin);
+  resetPinState = digitalRead(resetPin);
+  colour = (colour + 1)%8;
+
 
   // Check if the pin is HIGH
-  if (pinState == HIGH) {
+  if (resetPinState == HIGH) {
     Serial.println("Reset pin is HIGH, resetting ESP32...");
     delay(100); // Small delay to allow serial message to be sent
 
@@ -632,25 +644,10 @@ void loop()
     esp_restart();
   }
 
-
-  /*
-  setColor(255, 0, 0); // Red
+  #ifdef DEBUG
+  setColor(colourTable[colour*3], colourTable[(colour*3)+1], colourTable[(colour*3)+2]);
   delay(1000);
-  setColor(0, 255, 0); // Green
-  delay(1000);
-  setColor(0, 0, 255); // Blue
-  delay(1000);
-  setColor(255, 255, 0); // Yellow
-  delay(1000);
-  setColor(0, 255, 255); // Cyan
-  delay(1000);
-  setColor(255, 0, 255); // Magenta
-  delay(1000);
-  setColor(255, 255, 255); // White
-  delay(1000);
-  setColor(0, 0, 0); // Off
-  delay(1000);
-  */
+  #endif
 
   setDisplay(false, 4);
   
