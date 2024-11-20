@@ -25,6 +25,10 @@
 /*BOF COMPASS*/
 #include <QMC5883LCompass.h>    // MPrograms, https://github.com/mprograms/QMC5883LCompass
 
+#include "QMC5833LCompassModes.h" // some defined strings for the compass 
+
+#include "logo_bmp.h" // snowflake logo
+
 #define USE_SERIAL Serial1
 
 /* BOF LED */
@@ -39,20 +43,6 @@ const int resetPin = 26;
 
 WebSocketsClient webSocket;
 
-// Mode Control (MODE)
-const byte qmc5883l_mode_stby = 0x00;
-const byte qmc5883l_mode_cont = 0x01;
-const byte qmc5883l_odr_10hz  = 0x00;
-const byte qmc5883l_odr_50hz  = 0x04;
-const byte qmc5883l_odr_100hz = 0x08;
-const byte qmc5883l_odr_200hz = 0x0C;
-const byte qmc5883l_rng_2g    = 0x00;
-const byte qmc5883l_rng_8g    = 0x10;
-const byte qmc5883l_osr_512   = 0x00;
-const byte qmc5883l_osr_256   = 0x40;
-const byte qmc5883l_osr_128   = 0x80;
-const byte qmc5883l_osr_64    = 0xC0;
-
 QMC5883LCompass compass;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -63,28 +53,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define NUMFLAKES     10 // Number of snowflakes in the animation example
 
-#define LOGO_HEIGHT   16
-#define LOGO_WIDTH    16
 
-// MD20241119 Changed these from Bxxxxxxxx to 0bxxxxxxxx
-static const unsigned char PROGMEM logo_bmp[] =
-{ 0b00000000, 0b11000000,
-  0b00000001, 0b11000000,
-  0b00000001, 0b11000000,
-  0b00000011, 0b11100000,
-  0b11110011, 0b11100000,
-  0b11111110, 0b11111000,
-  0b01111110, 0b11111111,
-  0b00110011, 0b10011111,
-  0b00011111, 0b11111100,
-  0b00001101, 0b01110000,
-  0b00011011, 0b10100000,
-  0b00111111, 0b11100000,
-  0b00111111, 0b11110000,
-  0b01111100, 0b11110000,
-  0b01110000, 0b01110000,
-  0b00000000, 0b00110000 
-};
+
 
 // WiFi SSID and password are hard-coded here.
 // Later we may want to look at a provisioning mechanism so this is not necessary.
@@ -115,206 +85,6 @@ struct {
   char calibration_offset[100]="";
   char calibration_scale[100]="";
 } configData;
-
-
-/*************************************/
-// Define stream_html[], script_var[], style_var[] and index_html[] for web server pages
-/*************************************/
-const char stream_html[]  PROGMEM = R"rawliteral(
-{"workerName":%workerName%,"sensorURL":%sensorURL%,"socket_server_ip":%socket_server_ip%,"socket_server_port":%socket_server_port%,"calibration_data":%calibration_data%}
-)rawliteral";
-/*************************************/
-
-/*************************************/
-const char script_var[] PROGMEM = R"rawliteral(
-  let socket = new WebSocket("ws://%SOCKET_SERVER_IP_ADDRESS%:%SOCKET_SERVER_PORT%");
-  function testScript()
-  {
-    socket.send("{\"version\":\""+version+"\"}");
-  }
-  function updateSettings(element) 
-  {
-    var xhr = new XMLHttpRequest();
-    var elementID = element.id;
-    var elementValue = element.value;
-    console.log(elementID, elementValue);
-    xhr.open("GET", "/update?setting="+element.id+"&svalue="+element.value, true);
-    xhr.send();
-  }
-  socket.onopen = function(e) 
-  {
-    console.log("[open] Connection established");
-    socket.send("{\"version\":\"1\"}");
-  };
-  socket.onmessage = function(event) 
-  {
-    console.log(`${event.data}`);
-  };
-  socket.onclose = function(event) 
-  {
-    if (event.wasClean) 
-    {
-      console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-    } 
-    else 
-    {
-      console.log('[close] Connection died');
-    }
-  };
-  socket.onerror = function(error) 
-  {
-    console.log(`[error] ${error.message}`);
-  };
-)rawliteral";
-/*************************************/
-
-/*************************************************/
-const char style_var[] PROGMEM = R"rawliteral(
-  body
-  {
-    background-color: #0c0a3e;
-    margin: 0; height: 100%; overflow: hidden
-  }
-  a
-  {
-    color: #f9564f;
-  }
-    #pageContainer
-    {
-      height: 100vh;
-      width: 100%;
-      background-color: #0c0a3e;
-      color: #eee;
-      margin: 0 auto;
-    }
-    #pageContent
-    {
-      height: 100vh;
-      width: 80%;
-      background-color: #b33f62;
-      color: #eee;
-      margin: 0 auto;
-    }
-    #pageTitle
-    {
-      background-color:#7b1e7a;
-      height: 5vh;
-      width: 100%;
-      margin: 0 auto;
-      text-align:center;
-      padding-top: 2vh;
-      color:#f3c677;
-    }
-  #pageLinks
-    {
-      
-    }
-  #settingsDetails
-    {
-    
-    }
-  #splitContent
-  {
-    height:400px;
-    width: 100%;
-  }
-  #settings
-  {
-    height:99%;
-    width: 49%;
-    border-style: solid;
-  }
-  #headings
-  {
-    height:99%;
-    width: 49.5%;
-    margin-left: 50%;
-    margin-top: -400px;
-    border-style: solid;
-  }
-  #xdata
-  {
-    height: 30px;
-    width:32%;
-    text-align: center;
-    border-style: solid;
-    margin-left:-.25%;
-  }
-  #ydata
-  {
-    height: 30px;
-    margin-top:-34px;
-    margin-left:33%;
-    width:32%;
-    text-align: center;
-    border-style: solid;
-  }
-  #zdata
-  {
-    height: 30px;
-    margin-top:-34px;
-    margin-left:66.5%;
-    width:33%;
-    text-align: center;
-    border-style: solid;
-  }
-  #headingdata
-  {
-    height: 50px;
-    width:99.25%;
-    text-align: center;
-    font-size:32px;
-    border-style: solid;
-  }
-  table
-  {
-     text-align: left;
-  }
-  #GPS
-  {
-      
-  }
-)rawliteral";
-/************************************************/
-
-/*************************************/
-const char index_html[] PROGMEM = R"rawliteral(
-<!DOCTYPE HTML>
-<html>
-<head>
-  <title>Auto Pilot Manager</title>
-  <style>
-   
-  </style>
-  </head>
-  <body>
-  <div id=pageContainer>
-    <div id=pageContent>
-        <div id=pageTitle>Auto Pilot Manager
-          <div id=version></div>
-        </div>
-        <div id=pageLinks><a href=\reset>reset</a> | <a href=\about>about</a> </div>
-          <div id=settingsDetails>Settings update on change. </div>
-          <div id=splitContent>
-            <div id=settings>
-              <table>
-               %ROWPLACEHOLDER_VAR%
-              </table>
-            </div>
-            <div id=headings>
-            </div>
-            <div id=controls>
-              <button type="button" onclick="testScript(1)">test socket</button>
-            </div>
-    </div>
-  </div>
-
-<script>
- %SCRIPT_VAR%
-</script>
-</body>
-</html>
-)rawliteral";
 
 /******************************************************/
 // processor returns one of the defined cnaracter arrays above
