@@ -1,0 +1,360 @@
+openapi: 3.0.3
+info:
+  title: jayMarine Open Marine Systems
+  description: JayMarine API access helper
+    
+  termsOfService: http://www.thejasonengine.com/jayMarine/terms.html
+  contact:
+    email: jaymarine@thejasonengine.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.0.1
+externalDocs:
+  description: Find out more about jayMarine
+  url: http://www.thejasonengine.com/jayMarine/about.html
+servers:
+  - url: /api
+tags:
+  - name: api documentation
+    description: Everything about the design of the apis
+    externalDocs:
+      description: Find out more
+      url: https://www.thejasonengine.com/jayMarine/api/index.html
+paths:
+  /configure:
+    put:
+      tags:
+        - Configuration
+      summary: Updates configuration options
+      description: Puts a JSON payload to the server to update server configuration.
+      operationId: config_put
+      requestBody:
+        description: Update jayMarine configuration options
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiResponse'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Pet not found
+        '422':
+          description: Validation exception
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+    post:
+      tags:
+        - Configuration
+      summary: Updates configuration options
+      description: Puts a JSON payload to the server to update server configuration.
+      operationId: config_post
+      requestBody:
+        description: Update jayMarine configuration options
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiResponse'
+          
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid input
+        '422':
+          description: Validation exception
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  
+  /input/{workerId}:
+    post:
+      tags:
+        - input
+      summary: Inputs a payload form a worker
+      description: This will take a payload from a worker for processing
+      operationId: input_worker
+      parameters:
+        - name: status
+          in: query
+          description: Status values that need to be considered for filter
+          required: false
+          explode: true
+          schema:
+            type: string
+            default: available
+            enum:
+              - available
+              - pending
+              - sold
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid status value
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+            
+  /input/addSource:
+    post:
+      tags:
+        - input
+      summary: add a data source
+      description: >-
+        Multiple tags can be provided with comma separated strings. Use tag1,
+        tag2, tag3 for testing.
+      operationId: input_addSource
+      parameters:
+        - name: tags
+          in: query
+          description: Tags to filter by
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid tag value
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  
+  /input/removeSource:
+    delete:
+      tags:
+        - input
+      summary: Remove a data source
+      description: >-
+        Multiple tags can be provided with comma separated strings. Use tag1,
+        tag2, tag3 for testing.
+      operationId: input_removeSource
+      parameters:
+        - name: tags
+          in: query
+          description: Tags to filter by
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid tag value
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+  
+  /input/listSources:
+    get:
+      tags:
+        - input
+      summary: List all data sources connected
+      description: >-
+        Multiple tags can be provided with comma separated strings. Use tag1,
+        tag2, tag3 for testing.
+      operationId: input_listSource
+      parameters:
+        - name: tags
+          in: query
+          description: Tags to filter by
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid tag value
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets
+
+  /input/healthCheck/{workerId}:
+    get:
+      tags:
+        - input
+      summary: Polls a worker for a health check
+      description: >-
+        Multiple tags can be provided with comma separated strings. Use tag1,
+        tag2, tag3 for testing.
+      operationId: input_healthCheck
+      parameters:
+        - name: tags
+          in: query
+          description: Tags to filter by
+          required: false
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiResponse'
+            
+        '400':
+          description: Invalid tag value
+      security:
+        - petstore_auth:
+            - write:pets
+            - read:pets            
+            
+            
+ 
+  /input/:datasource:
+    summary: This is a summary of the API
+    description: This is an optional description
+  /datasource/ds: {}
+components:
+  schemas:
+    
+    
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        type:
+          type: string
+        message:
+          type: string
+      xml:
+        name: '##default'
+        
+        
+        
+        
+    configuration:
+      
+      required:
+        - name
+        - photoUrls
+      type: object
+      
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+        
+        name:
+          type: string
+          example: doggie
+        
+        photoUrls:
+          type: array
+          items:
+            type: string
+        
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiResponse'
+        
+        status:
+          type: string
+          description: pet status in the store
+          enum:
+            - available
+            - pending
+            - sold
+     
+        
+        
+        
+  requestBodies:
+    Pet:
+      description: Pet object that needs to be added to the store
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+        
+    UserArray:
+      description: List of user object
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ApiResponse'
+  securitySchemes:
+    petstore_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://petstore3.swagger.io/oauth/authorize
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
