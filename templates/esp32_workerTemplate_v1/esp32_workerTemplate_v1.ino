@@ -17,8 +17,8 @@
 
 WebSocketsClient webSocket;
 
-const char* ssid = "suttonzoo";
-const char* ss_password = "Happyh1pp0";
+const char* ssid = "jaymarine";
+const char* ss_password = "passpass";
 
 String WORKER_IP_ADDRESS = "0.0.0.0";
 
