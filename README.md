@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/30320618-acf2-49c4-b9ea-35dbc9eaa2a6)# jaymarine
+# jaymarine
 An Open Alternative To Marine Solutions. What we try to create is effective, performant and cost effective solutions for automation enthusiasts. These tools are not commercial, or alternatives to commercial tools. These are built for fun and curriosity. We hope you use them, play with them and enjoy what they can do for you. 
 
 
