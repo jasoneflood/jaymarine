@@ -5,6 +5,9 @@
 //
 // style_var code for md_esp_compass
 /*************************************/
+
+// declare the processor function
+
 const char style_var[] PROGMEM = R"rawliteral(
   body
   {
