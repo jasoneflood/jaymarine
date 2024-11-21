@@ -38,7 +38,7 @@
 #include "src/include/style_var.h"    // style variable
 #include "src/include/index_html.h"   // index.html
 #include "src/include/WiFiDetails.h"  // default WiFi logon details
-#include "ConfigData.h"
+#include "src/include/ConfigData.h"
 
 
 #define DEBUG
@@ -95,7 +95,7 @@ int resetPinState;
 uint addr = 0;
 
 
-#include "processor.h"
+#include "src/include/processor.h"
 
 /***********************************************/
 /* This is a websocket event manager. This 
