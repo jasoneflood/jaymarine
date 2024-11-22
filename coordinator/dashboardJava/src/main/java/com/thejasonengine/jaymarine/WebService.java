@@ -217,9 +217,6 @@ public class WebService extends AbstractVerticle
 						  generateDashboardData(jo_worker);
 						}
 				  }
-				  
-				  
-				  
 				  jsonResponse = "{\"datasource\":\""+datasource+"\",\"response\":\"OK\"}";
 			  }
 			  catch(Exception e)
@@ -232,79 +229,7 @@ public class WebService extends AbstractVerticle
 		  
 		  StaticHandler staticHandler = StaticHandler.create().setCachingEnabled(false);
 	      router.route("/*").handler(staticHandler);
-		  //router.get("/swagger").handler(StaticHandler.create().setWebRoot("swagger"));   
 		  
-		  /*
-		  router.route("/sensor/*").handler(StaticHandler.create().setCachingEnabled(false).setWebRoot("webroot/sensor"));   
-		  
-		  router.route("/sendTest/:username").handler(rc -> 
-		  {
-			  String username = rc.pathParam("username");
-			  LOGGER.info("test username:" + username);
-			  spearPhish(username);
-		  });
-		  router.route("/generateTestData/:type").handler(rc -> 
-		  {
-			  HttpServerResponse response = rc.response();
-			  String type = rc.pathParam("type");
-			  LOGGER.debug("type:" + type);
-			  if(type.compareToIgnoreCase("heart") == 0)
-			  {
-				  LOGGER.info("Genenerating Heart Test Payloads");
-				  vertx.setPeriodic(1000 * 1 * 1, (id) -> 
-				  {
-					  //Send every 1 second   
-					  String testData = "{\"Source\":{\"playerid\":\"player1\"},\"SensorData\":{\"BPM\":\"90\"}}";
-					  sendMessage(testData);
-					  if (!rc.response().ended()) 
-					  {
-						  rc.response().end("generated test data: " + id);
-					  }
-					 
-				  });
-			  }
-		  });
-		  router.route("/cancelGenerateTestData/:id").handler(rc -> 
-		  {
-			  HttpServerResponse response = rc.response();
-			  String id = rc.pathParam("id");
-			  LOGGER.debug("id:" + id);
-			  Long idL = Long.parseLong(id, 10); // returns 473L
-			  boolean canceledTimer = vertx.cancelTimer(idL);
-			  
-			  response.end("Canceling periodic: " + idL + " : " + canceledTimer);
-		  });
-		  
-		  router.post("/:endpoint/payload").handler(BodyHandler.create()).handler(rc -> 
-		  {
-			  String endpoint = rc.pathParam("endpoint");
-			  LOGGER.debug("Endpoint:" + endpoint);
-			  HttpServerResponse response = rc.response();
-			  
-			  try
-			  {
-				  //LOGGER.error("here:" + rc.getBodyAsString());
-				  JsonObject JSONpayload = rc.getBodyAsJson();
-				  
-				  //JsonArray JSONpayload = rc.getBodyAsJsonArray();
-				  
-				  //JsonObject JSONpayload = rc.getBodyAsJson();
-				  //JSONpayload.put("endpoint", endpoint);
-				  
-				  
-				  
-				  
-				  LOGGER.info(JSONpayload.encodePrettily());
-				  broadcastToDashboards(JSONpayload.encode());
-				  response.end("OK");
-			  }
-			  catch(Exception e)
-			  {
-				  response.end("Error");
-				  LOGGER.error("Error: " + e.toString());
-			  }
-		  });
-		  */
 	  }
 	  /**********************************************************************************/
 	  private String calculateDirectionOfTurn(int delta)
@@ -345,8 +270,143 @@ public class WebService extends AbstractVerticle
 	  {
 		 
 		  LOGGER.info("Upgrading router for websocket");
-		 
-		  router.route("/reading/:worker").handler(rc -> 
+		  /******************************************************************************/
+		  /* This is how we handle data read/sent from the agents identified by agent
+		  /******************************************************************************/
+		  router.route("/agent/read/:agent").handler(rc -> 
+		  {
+			  String agent = rc.pathParam("agent");
+			  LOGGER.info("websocket agent connected: " + agent);
+			 
+			  rc.request().toWebSocket(ar -> 
+			  {
+
+				  LOGGER.info("upgrading to websocket");
+		          if (ar.succeeded()) 
+		          {
+		            ServerWebSocket websocket = ar.result();
+		            LOGGER.info("successfully upgraded to websocket");
+		            
+		            WebSocketClient wsClient = new WebSocketClient();
+		            LOGGER.info("client connected: "+ websocket.textHandlerID());
+		            String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date());
+					  
+					wsClient.setConnectionId(websocket.textHandlerID());
+					wsClient.setWsConnection(websocket);
+					wsClient.setTimestamp(timeStamp);
+					wsClient.setWorkerName(agent);
+					
+					LOGGER.info("Sending client welcome message: "+ websocket.textHandlerID());
+					wsClient.getWsConnection().writeTextMessage("Connected to coordinator as agent: " + agent);
+					wsClient.getWsConnection().writeTextMessage("Test");
+					wsClients.add(wsClient);
+					
+					if(agent.compareToIgnoreCase("compass") ==0)
+					{
+						//compassWsClients.add(wsClient);
+					}
+					if(agent.compareToIgnoreCase("temperature") ==0)
+					{
+						//compassWsClients.add(wsClient);
+					}
+					LOGGER.info("Have added client "+ websocket.textHandlerID() +" to the list of active connections");
+
+					/******************************************************************************/
+					/* This is what we do when we recieve a message from an entire chat channel   */
+					/******************************************************************************/  
+		            vertx.eventBus().consumer(CHAT_CHANNEL, message -> 
+					{
+						  LOGGER.info("Consuming message from "+ CHAT_CHANNEL + " client " +websocket.textHandlerID() + " sent to server by "+ wsClient.getWorkerName() +": " + (String)message.body());
+						 //websocket.writeTextMessage((String)message.body());
+					});
+		            /*************************************************************************/
+					/* This is what we do when we recieve a message to an individual client  */
+					/*************************************************************************/  
+		            websocket.textMessageHandler(message -> 
+					{
+						  LOGGER.info("Consuming message from client: " + websocket.textHandlerID() +" under control of: "+ wsClient.getWorkerName() + " :"+  (String)message); 
+						  
+						  JsonObject jo =  new JsonObject((String)message);
+						  LOGGER.info("agent:" + wsClient.getWorkerName());
+						  LOGGER.info("version:" + jo.getString("version"));
+						  LOGGER.info("data:" + jo.getString("data"));
+						  LOGGER.info("agent_ip:" + jo.getString("agent_ip"));
+						  
+						  JsonObject jo_worker =  new JsonObject();
+						  
+						  jo_worker.put("workerName", wsClient.getWorkerName());
+						  jo_worker.put("version", jo.getString("version"));
+						  jo_worker.put("data", jo.getString("data"));
+						  jo_worker.put("worker_ip", jo.getString("worker_ip"));
+						  jo_worker.put("epoch", generateEpoch());
+						  
+						  if(wsClient.getWorkerName().compareToIgnoreCase("compass")==0)
+						  {
+							  CompassVar = jo.getString("data");
+						  }
+					});
+		            /*****************************************************************/
+					/* This is how we handle a websocket closing                     */
+					/*****************************************************************/ 
+		            websocket.closeHandler(message ->
+					{
+						  LOGGER.info("client disconnection detected: "+websocket.textHandlerID());
+						  cleanConnections(wsClients, websocket);
+						  if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
+						  {
+			            		cleanConnections(dashboardWsClients, websocket);
+						  }
+						  LOGGER.info("Have removed active connection: "+ websocket.textHandlerID() +" from list that was under control of: " + wsClient.getWorkerName());
+						  LOGGER.info("There are currently " + wsClients.size() + " active client connections");
+					});
+		            /**********************************************************************/
+		            /*	This is how we handle exceptions in the websocket
+		           	/**********************************************************************/
+		            websocket.exceptionHandler(e->
+		            {
+		            	LOGGER.error("An exception has been raised for client: " + websocket.textHandlerID() + " error:" + e.getMessage());
+		            	websocket.close();
+		            	LOGGER.error("The broken connection to: " + websocket.textHandlerID() +" under control of " + wsClient.getWorkerName() + " has been removed");
+		            	cleanConnections(wsClients, websocket);
+		            	if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
+		            	{
+		            		cleanConnections(dashboardWsClients, websocket);
+		            	}
+		            });
+		            
+		          }
+		          if (ar.failed())
+		          {
+		        	  LOGGER.error("Error" + ar.cause().getMessage());
+		          }
+		        });
+				  
+				  
+				  
+				  
+				  
+				  
+				  
+				  
+			  });
+		  /******************************************************************************/
+		  /* This is how we send a message to an agent - in the normal course of operation we should not need to do this. Useful for a "repeat or confirm"
+		  /******************************************************************************/
+		  router.route("/agent/write/:agent").handler(rc -> 
+		  {
+			  String agent = rc.pathParam("agent");
+			  LOGGER.info("websocket agent connected: " + agent);
+			 
+			  rc.request().toWebSocket(ar -> 
+			  {
+				  
+			  });
+			  
+		  });
+		  /******************************************************************************/
+		  /* This is how we handle data sent from a worker - in the normal course of operation we should not need to do this. Useful for a "repeat or confirm"
+		  /******************************************************************************/
+		  router.route("/worker/read/:worker").handler(rc -> 
 		  {
 			  String worker = rc.pathParam("worker");
 			  LOGGER.info("websocket worker connected: " + worker);

@@ -2,9 +2,9 @@
 
 /*********
  Author: Jason Flood
- Codebase: esp32_workerTemplate_v1
+ Codebase: esp32_agentTemplate_v1
 
-This is a template file upon which all v1 workers should be built. If the template is no longer suitable - please do not update it, instead create a new version template.
+This is a template file upon which all v1 agents should be built. If the template is no longer suitable - please do not update it, instead create a new version template.
 This is to support API requests and handling from potential worker evolutions.
 
 
@@ -204,7 +204,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML>
 <html>
 <head>
-  <title>Auto Pilot Manager</title>
+  <title>jaymarine agent manager</title>
   <style>
    
   </style>
@@ -212,7 +212,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   <body>
   <div id=pageContainer>
     <div id=pageContent>
-        <div id=pageTitle>Auto Pilot Manager
+        <div id=pageTitle>Agent Manager
           <div id=version></div>
         </div>
         <div id=pageLinks><a href=\reset>reset</a> | <a href=\about>about</a> </div>
@@ -270,7 +270,7 @@ String processor(const String& var)
     rows += configData.ss_password;
     rows +="\"></td></tr>";
 
-    rows += "<tr><td>workerName</td><td><input type=\"text\" id=\"workerName\" onchange=\"updateSettings(this)\" value=\"";
+    rows += "<tr><td>agentName</td><td><input type=\"text\" id=\"workerName\" onchange=\"updateSettings(this)\" value=\"";
     rows += configData.workerName;
     rows +="\"></td></tr>";
 
@@ -282,7 +282,7 @@ String processor(const String& var)
     rows += configData.socket_server_port;
     rows +="\"></td></tr>";
 
-    rows += "<tr><td>sensorURL</td><td><input type=\"text\" id=\"sensorURL\" onchange=\"updateSettings(this)\" value=\"";
+    rows += "<tr><td>agentURL</td><td><input type=\"text\" id=\"sensorURL\" onchange=\"updateSettings(this)\" value=\"";
     rows += configData.sensorURL;
     rows +="\"></td></tr>";
 
@@ -299,6 +299,13 @@ String processor(const String& var)
   /******************************************************/
   return String();
 }
+/*******************************************************/
+void takeAction(char * myPayload)
+{
+    Serial.println(myPayload); 
+
+}
+
 /***********************************************/
 /* This is a websocket event manager. This 
  * code executes when client connects. Or  
@@ -315,11 +322,25 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length)
 			USE_SERIAL.printf("[WSc] Connected to url: %s\n", payload);
 
 			// send message to server when Connected
-			webSocket.sendTXT("Connected");
+			webSocket.sendTXT("{\"status\":\"Connected\"}");
 			break;
 		case WStype_TEXT:
 			USE_SERIAL.printf("[WSc] get text: %s\n", payload);
+      
+      char myPayload[1000]; // Ensure the array is large enough to hold the final string
+      myPayload[0] = '\0';
+      for (size_t i = 0; i < length; i++) 
+      {
+          char temp[2] = {(char)payload[i], '\0'};
+          strcat(myPayload, temp);
+      }
+      //Serial.println(myPayload); 
 
+     takeAction(myPayload);
+
+      myPayload[0] = '\0';
+
+      //Serial.print(payload);
 			// send message to server
 			// webSocket.sendTXT("message here");
 			break;
@@ -479,16 +500,6 @@ void setup()
 	webSocket.onEvent(webSocketEvent);
 	webSocket.setReconnectInterval(5000);
   Serial.println("Websocket started");
-
-
-
-}
-/************************************************/
-String generateTestData_intAsString()
-{
-     int random_int = random(0,361); //returns a number between 0 and 360
-     String random_string = String(random_int);
-     return random_string;
 }
 /************************************************/
 String IpAddress2String(IPAddress ipAddress)
@@ -507,15 +518,5 @@ void sensor_data()
 void loop() 
 {
   webSocket.loop();
-  String jsonData ="{\"version\":";
-  jsonData += "\"template\"";
-  jsonData += ",\"template_data\":";
-  jsonData += generateTestData_intAsString();
-  jsonData += ",\"worker_ip\":";
-  jsonData += "\"";
-  jsonData += WORKER_IP_ADDRESS;
-  jsonData += "\"";
-  jsonData +="}";
-  webSocket.sendTXT(jsonData);
   delay(150);
 }
