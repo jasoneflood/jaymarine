@@ -9,7 +9,6 @@
 #include <SPI.h>                // default library?
 #include <Wire.h>               // default library?
 #include <WiFi.h>               // default library?
-#include <String.h>
 
 #include <AsyncTCP.h>           // mathieucarbou, https://github.com/mathieucarbou/AsyncTCP 
 #include <ESPAsyncWebServer.h>  // mathieucarbou,, https://github.com/mathieucarbou/ESPAsyncWebServer
@@ -38,16 +37,10 @@
 #include "src/include/style_var.h"    // style variable
 #include "src/include/index_html.h"   // index.html
 #include "src/include/WiFiDetails.h"  // default WiFi logon details
-#include "src/include/ConfigData.h"
-
 
 #define DEBUG
 
-
 #define USE_SERIAL Serial1
-
-// declare myConfigData as an instance of typedef CD
-ConfigData  myConfigData;
 
 /* BOF LED */
 const int redPin = 13;   
@@ -94,8 +87,94 @@ int resetPinState;
 
 uint addr = 0;
 
+struct {
+  uint val = 0;
+  char workerName[50] = "";
+  char sensorURL[50] = "";
+  char ssid[20] = "";
+  char ss_password[20] = "";
+  char socket_server_ip[50]= "";
+  char socket_server_port[8]="";
+  char calibration_offset[100]="";  // If we are to generalise this, are these fields general or
+  char calibration_scale[100]="";   // are they sorcific to the QMC5883LCompass
+} configData;
 
-#include "src/include/processor.h"
+/******************************************************/
+// processor returns one of the defined cnaracter arrays above
+// stream_html[], script_var[], style_var[] and index_html[]
+/******************************************************/
+String processor(const String& var)
+{
+    String gpsData ="";
+  //Serial.println(var);
+  /******************************************************/
+  
+  if(var == "STYLE_VAR")
+  {
+      Serial.println("integrating the STYLES variable");
+      return style_var;
+  }
+  /******************************************************/
+  if(var == "SCRIPT_VAR")
+  {
+    Serial.println("integrating the SCRIPT variable");
+    return script_var;
+  }
+  /******************************************************/
+  if(var == "SOCKET_SERVER_IP_ADDRESS")
+  {
+    return SOCKET_SERVER_IP_ADDRESS;
+  }
+  /******************************************************/
+  if(var == "ROWPLACEHOLDER_VAR")
+  {
+    String rows = "";
+    rows += "<tr><td>ssid</td><td><input type=\"text\" id=\"ssid\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.ssid;
+    rows +="\"></td> (EG: SSID)</tr>";
+    
+    rows += "<tr><td>ss_password</td><td><input type=\"text\" id=\"ss_password\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.ss_password;
+    rows +="\"></td> (EG: PASSWORD)</tr>";
+
+    rows += "<tr><td>workerName</td><td><input type=\"text\" id=\"workerName\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.workerName;
+    rows +="\"></td> (EG: compass)</tr>";
+
+    rows += "<tr><td>socket_server_ip</td><td><input type=\"text\" id=\"socket_server_ip\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.socket_server_ip;
+    rows +="\"></td> (EG: 192.168.10.239)</tr>";
+
+    rows += "<tr><td>socket_server_port</td><td><input type=\"text\" id=\"socket_server_port\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.socket_server_port;
+    rows +="\"></td> (EG: 3200)</tr>";
+
+    rows += "<tr><td>sensorURL</td><td><input type=\"text\" id=\"sensorURL\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.sensorURL;
+    rows +="\"></td> (EG: /reading/compass)</tr>";
+
+    rows += "<tr><td>calibration_offset</td><td><input type=\"text\" id=\"calibration_offset\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.calibration_offset;
+    rows +="\"></td> (EG: -729.00,-445.00,1045.00) </tr>";
+
+    rows += "<tr><td>calibration_scale</td><td><input type=\"text\" id=\"calibration_scale\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.calibration_scale;
+    rows +="\"></td> (EG: 0.94, 0.87, 1.27) </tr>";
+    
+
+    return rows;
+  }
+  /******************************************************/
+  if(var == "JSONDATA")
+  {
+    String jsonData = "cat\":\"dog\"";
+    Serial.println("jsonData: ");
+    Serial.println(jsonData);
+    return jsonData;
+  }
+  /******************************************************/
+  return String();
+}
 
 /***********************************************/
 /* This is a websocket event manager. This 
@@ -252,13 +331,13 @@ void setup()
   Serial.println("Setting up ESP 32 WROOM");
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(myConfigData.ssid);
+  Serial.println(configData.ssid);
 
   EEPROM.begin(512);
-  // read bytes (i.e. sizeof(myConfigData) from "EEPROM"),
+  // read bytes (i.e. sizeof(configData) from "EEPROM"),
   // in reality, reads from byte-array cache
   // cast bytes into structure called data
-  EEPROM.get(addr,myConfigData);
+  EEPROM.get(addr,configData);
   
  
   float x_calibration_offset = 0.00;
@@ -266,7 +345,7 @@ void setup()
   float z_calibration_offset = 0.00;
   /*
   float values[3];
-  parseCSV(myConfigData.calibration_offset, values);
+  parseCSV(configData.calibration_offset, values);
   int numValues = sizeof(values) / sizeof(values[0]);
   
   
@@ -300,11 +379,11 @@ void setup()
   compass.setCalibrationOffsets(x_calibration_offset, y_calibration_offset, z_calibration_offset);
   compass.setCalibrationScales(0.94, 0.87, 1.26);
 
-  Serial.println("EPROM values are: "+String(myConfigData.ssid)+","+String(myConfigData.ss_password));
+  Serial.println("EPROM values are: "+String(configData.ssid)+","+String(configData.ss_password));
 
-  oledDisplayText("Connecting: " + String(myConfigData.ssid), false, 2);
+  oledDisplayText("Connecting: " + String(configData.ssid), false, 2);
   delay(500);
-  WiFi.begin(String(myConfigData.ssid), String(myConfigData.ss_password));
+  WiFi.begin(String(configData.ssid), String(configData.ss_password));
 
  
   
@@ -382,7 +461,7 @@ void setup()
         char svalueBuff[20];
         svalue.toCharArray(svalueBuff, 20);
         Serial.println("ssid value updated");
-        strncpy(myConfigData.ssid, svalueBuff, 20);
+        strncpy(configData.ssid, svalueBuff, 20);
       }
       if(setting == "ss_password")
       {
@@ -390,7 +469,7 @@ void setup()
         char svalueBuff[20];
         svalue.toCharArray(svalueBuff, 20);
         Serial.println("password value updated");
-        strncpy(myConfigData.ss_password, svalueBuff, 20);
+        strncpy(configData.ss_password, svalueBuff, 20);
       }
       if(setting == "socket_server_ip")
       {
@@ -398,7 +477,7 @@ void setup()
         char svalueBuff[50];
         svalue.toCharArray(svalueBuff, 50);
         Serial.println("socket_server_ip value updated");
-        strncpy(myConfigData.socket_server_ip, svalueBuff, 50);
+        strncpy(configData.socket_server_ip, svalueBuff, 50);
       }
       if(setting == "socket_server_port")
       {
@@ -406,7 +485,7 @@ void setup()
         char svalueBuff[8];
         svalue.toCharArray(svalueBuff, 8);
         Serial.println("socket_server_port value updated");
-        strncpy(myConfigData.socket_server_port, svalueBuff, 8);
+        strncpy(configData.socket_server_port, svalueBuff, 8);
       }
       if(setting == "sensorURL")
       {
@@ -414,7 +493,7 @@ void setup()
         char svalueBuff[50];
         svalue.toCharArray(svalueBuff, 50);
         Serial.println("sensorURL value updated");
-        strncpy(myConfigData.sensorURL, svalueBuff, 50);
+        strncpy(configData.sensorURL, svalueBuff, 50);
       }
       if(setting == "workerName")
       {
@@ -422,7 +501,7 @@ void setup()
         char svalueBuff[50];
         svalue.toCharArray(svalueBuff, 50);
         Serial.println("workerName value updated");
-        strncpy(myConfigData.workerName, svalueBuff, 50);
+        strncpy(configData.workerName, svalueBuff, 50);
       }
       if(setting == "calibration_offset")
       {
@@ -430,7 +509,7 @@ void setup()
         char svalueBuff[100];
         svalue.toCharArray(svalueBuff, 100);
         Serial.println("calibration_offset value updated");
-        strncpy(myConfigData.calibration_offset, svalueBuff, 100);
+        strncpy(configData.calibration_offset, svalueBuff, 100);
       }
       if(setting == "calibration_scale")
       {
@@ -438,11 +517,11 @@ void setup()
         char svalueBuff[100];
         svalue.toCharArray(svalueBuff, 100);
         Serial.println("calibration_scale value updated");
-        strncpy(myConfigData.calibration_scale, svalueBuff, 100);
+        strncpy(configData.calibration_scale, svalueBuff, 100);
       }
 
       
-      EEPROM.put(addr,myConfigData);
+      EEPROM.put(addr,configData);
       EEPROM.commit();
     }
     request->send(200, "text/plain", "OK");
@@ -450,7 +529,7 @@ void setup()
   /******************************************/
   server.begin();
   Serial.println("Web server started");
-  webSocket.begin(myConfigData.socket_server_ip, 3200, myConfigData.sensorURL);
+  webSocket.begin(configData.socket_server_ip, 3200, configData.sensorURL);
   webSocket.onEvent(webSocketEvent);
   webSocket.setReconnectInterval(5000);
   Serial.println("Websocket started");
