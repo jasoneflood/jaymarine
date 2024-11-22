@@ -651,8 +651,8 @@ void loop()
   }
 
   #ifdef DEBUG
-  setColor(colourTable[colour_index*3], colourTable[(colour_index*3)+1], colourTable[(colour_index*3)+2]);
-  delay(1000);
+  // setColor(colourTable[colour_index*3], colourTable[(colour_index*3)+1], colourTable[(colour_index*3)+2]);
+  // delay(1000);
   #endif
 
   setDisplay(false, 4);
@@ -676,7 +676,7 @@ void loop()
   jsonData += "\"";
   jsonData +="}";
 
-  setColor(0, 255, 255); // Green
+  // setColor(0, 255, 0); // Green
 
   bool sent = webSocket.sendTXT(jsonData);
   if(sent)
@@ -691,7 +691,7 @@ void loop()
         Serial.print("message successfully sent: " + sent);
         setColor(255, 0, 0); // Red
   }
-  delay(1000);
+  delay(500);
   setColor(0, 0, 0); // OFF, Black
   //setDisplay(false, 2);
   //oledDisplayCenter(WORKER_IP_ADDRESS);
