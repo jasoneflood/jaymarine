@@ -21,7 +21,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           <div id=version></div>
         </div>
         <div id=pageLinks><a href=\reset>reset</a> | <a href=\about>about</a> </div>
-          <div id=settingsDetails>Settings update on change. </div>
+          <div id=settingsDetails>MD: Settings update on change. </div>
           <div id=splitContent>
             <div id=settings>
               <table>

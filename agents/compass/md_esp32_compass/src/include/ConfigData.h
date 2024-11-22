@@ -4,8 +4,8 @@ typedef struct {
   uint val = 0;
   char workerName[50] = "";
   char sensorURL[50] = "";
-  char ssid[20] = "";
-  char ss_password[20] = "";
+  char ssid[20] = "VX12-D";
+  char ss_password[20] = "northeaston";
   char socket_server_ip[50]= "";
   char socket_server_port[8]="";
   char calibration_offset[100]="";  // If we are to generalise this, are these fields general or
