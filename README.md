@@ -8,10 +8,10 @@ An Open Alternative To Marine Solutions. What we try to create is effective, per
 ## agent
 
 ###LED Codes
-red: Not Connected
-blue: Connected 
-green (On while sending): Sending Message
-white: Responding to heartbeat request
+* red: Not Connected
+* blue: Connected 
+* green (On while sending): Sending Message
+* white: Responding to heartbeat request
 
 Led normal operations should be blue -> green loop as the system confirms a message sending on a connected network. A heartbeat response will be indicated by a 3 blink white pattern.
 
@@ -52,10 +52,10 @@ The data is a String that the co-ordinator will treat depending on the endpoint.
 A worker is essentially an on/off switch. For example a fan that can turn on and off. It is intentionally dumb and has no awareness for why it is going on and off. It simply follows instructions from the co-ordinator. *For saftey we may want a worker to perform a sanity check with an agent, for this reason its considered that we may require a validation route from worker to agent. This should be an exception and not the rule*
 
 ###LED Codes
-red: Not Connected
-blue: Connected 
-green (On while recieving): Recieving Message
-white: Responding to heartbeat request
+* red: Not Connected
+* blue: Connected 
+* green (On while recieving): Recieving Message
+* white: Responding to heartbeat request
 
 
 ### /websocket/worker/read/tiller
