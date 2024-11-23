@@ -26,6 +26,7 @@ heartbeat response
 	"version": "1",
 	"data": "OK",
 	"endpoint": "compass",
+	"ip": "192.168.75.21",
 	"epoch":"127272212"
 }
 ```
@@ -45,7 +46,6 @@ This data is sent from the co-ordinator to the worker.
 {
 	"version": "1",
 	"data": "off",
-	"ip": "192.168.75.21",
 	"endpoint": "tiller",
 	"epoch":"127272212"
 }
@@ -57,6 +57,7 @@ heartbeat response
 	"version": "1",
 	"data": "OK",
 	"endpoint": "tiller"
+	"ip": "192.168.75.22",
 	"epoch":"127272212"
 	
 }
