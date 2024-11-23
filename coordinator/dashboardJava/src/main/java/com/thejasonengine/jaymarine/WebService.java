@@ -304,7 +304,16 @@ public class WebService extends AbstractVerticle
 					wsClient.setEndpoint(endpoint);
 					
 					LOGGER.info("Sending client welcome message: "+ websocket.textHandlerID());
-					wsClient.getWsConnection().writeTextMessage("Connected to coordinator as " + type + " connected for: " + access + " access on endpoint known as:" + endpoint);
+					
+					String epochMillisString = String.valueOf(System.currentTimeMillis());
+					
+					JsonObject connection_jo = new JsonObject();
+					connection_jo.put("version", "1");
+					connection_jo.put("data", "connection successful");
+					connection_jo.put("epoch", epochMillisString);
+					
+					
+					wsClient.getWsConnection().writeTextMessage(connection_jo.encode());
 					wsClients.add(wsClient);
 					
 					

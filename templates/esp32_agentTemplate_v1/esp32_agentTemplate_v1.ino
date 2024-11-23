@@ -308,8 +308,30 @@ String processor(const String& var)
 /*******************************************************/
 void takeAction(char * myPayload)
 {
-    Serial.println(myPayload); 
+     DeserializationError error = deserializeJson(doc, myPayload);
 
+    // Check for errors in parsing
+    if (error) 
+    {
+      Serial.print("Failed to parse JSON: ");
+      Serial.println(error.c_str());
+    }
+    else
+    {
+      Serial.print("Successfully deserialized json data");
+      Serial.println(myPayload); 
+      const char* version = doc["version"];      
+      const char* data = doc["data"];      
+      const char* epoch = doc["epoch"];   
+
+      Serial.println("Parsed JSON:");
+      Serial.print("version: ");
+      Serial.println(version);
+      Serial.print("data: ");
+      Serial.println(data);
+      Serial.print("epoch: ");
+      Serial.println(epoch);
+    }
 }
 
 /***********************************************/
@@ -333,6 +355,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length)
 		case WStype_TEXT:
 			USE_SERIAL.printf("[WSc] get text: %s\n", payload);
       
+      /*************************** AGENT HAS RECIEVED A MESSAGE - THIS SHOULD BE A HEARTBEAT ****************************************/
       char myPayload[1000]; // Ensure the array is large enough to hold the final string
       myPayload[0] = '\0';
       for (size_t i = 0; i < length; i++) 
@@ -341,8 +364,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length)
           strcat(myPayload, temp);
       }
       //Serial.println(myPayload); 
-
-     takeAction(myPayload);
+      takeAction(myPayload);
 
       myPayload[0] = '\0';
 
