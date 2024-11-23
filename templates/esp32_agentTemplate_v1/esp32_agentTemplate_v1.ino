@@ -526,20 +526,52 @@ String generateTestData_intAsString()
 /*
 /* Change the code below these lines to suit your sensor.
 /*
+
+
+/**************************************************************************************************************************************/
+String getAgentVersion()
+{
+  String version = "1";
+  return version;
+}
+
+String getAgentIP()
+{
+  String ip = WORKER_IP_ADDRESS;
+  return ip;
+}
+
+String getAgentData()
+{
+  String data = generateTestData_intAsString();
+  return data;
+}
+
+String getAgentEndpoint()
+{
+  String endpoint = "configData.workerName";
+  return endpoint;
+}
+
 /**************************************************************************************************************************************/
 String generateSensorData()
 {
   
+  String version = getAgentVersion();
+  String data = getAgentData();
+  String ip = getAgentIP();
+  String endpoint = getAgentEndpoint();
+
   String jsonData ="{\"version\":";
-  jsonData += "\"version\"";
+  jsonData += "\""+version+"\"";
   jsonData += ",\"data\":\"";
-  jsonData += generateTestData_intAsString();
+  jsonData += data;
   jsonData += "\",\"ip\":";
   jsonData += "\"";
-  jsonData += WORKER_IP_ADDRESS;
-  jsonData += ",\"endpoint\":";
+  jsonData += ip;
+  jsonData += "\",\"endpoint\":";
   jsonData += "\"";
-  jsonData += "configData.workerName";
+  jsonData += endpoint;
   jsonData +="\"}";
   
 
