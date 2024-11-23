@@ -76,6 +76,9 @@ A coordinator is the brains of the operation. It takes in data from its agents, 
 
 ### /websocket/coordinator/admin/administrator
 
+heartbeat request can be sent to any connected worker or agent websocket end point. It must be sent in the following format.
+
+
 ```
 {
 	"version": "1",
