@@ -63,8 +63,7 @@ heartbeat response
 	"data": "OK",
 	"endpoint": "tiller"
 	"ip": "192.168.75.22",
-	"epoch":"127272212"
-	
+	"epoch":"127272212"	
 }
 ```
 
