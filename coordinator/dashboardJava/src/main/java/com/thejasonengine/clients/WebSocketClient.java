@@ -9,7 +9,7 @@ public class WebSocketClient
 	
 	String connectionId;
 	ServerWebSocket wsConnection;
-	String workerName;
+	String endpoint;
 	String email;
 	boolean active;
 	String timestamp;
@@ -33,13 +33,13 @@ public class WebSocketClient
 		this.wsConnection = wsConnection;
 	}
 	/******************************************************/
-	public String getWorkerName() 
+	public String getEndpoint() 
 	{
-		return workerName;
+		return endpoint;
 	}
-	public void setWorkerName(String workerName) 
+	public void setEndpoint(String endpoint) 
 	{
-		this.workerName = workerName;
+		this.endpoint = endpoint;
 	}
 	/******************************************************/
 	public String getEmail() 

@@ -47,7 +47,7 @@ public class WebService extends AbstractVerticle
 	  private WebSocket wsCtx;
 	  private int SocketPort = 3200;
 	  private String SocketDomain = "127.0.0.1";
-	  private String SocketConnectionId = "/reading/coordinator";
+	  private String SocketConnectionId = "/websocket/coordinator/admin/administrator";
 	  private HashSet<WebSocketClient> wsClients = new HashSet<WebSocketClient>();
 	  private HashSet<WebSocketClient> dashboardWsClients = new HashSet<WebSocketClient>();
 	  private String CompassVar = "0";
@@ -271,14 +271,21 @@ public class WebService extends AbstractVerticle
 		 
 		  LOGGER.info("Upgrading router for websocket");
 		  /******************************************************************************/
-		  /* This is how we handle data read/sent from the agents identified by agent
+		  /* This is how we handle data read/sent
+		   * type: agent/worker
+		   * access: read/write
+		   * endpoint: temperature/compass/gps etc 
+		   */
 		  /******************************************************************************/
-		  router.route("/agent/read/:agent").handler(rc -> 
+		  router.route("/websocket/:type/:access/:endpoint").handler(rc -> 
 		  {
-			  String agent = rc.pathParam("agent");
-			  LOGGER.info("websocket agent connected: " + agent);
+			  String type = rc.pathParam("type");
+			  String access = rc.pathParam("access");
+			  String endpoint = rc.pathParam("endpoint");
+			  
+			  LOGGER.info("websocket " + type + " connected for: " + access + " access on endpoint known as:" + endpoint);
 			 
-			  rc.request().toWebSocket(ar -> 
+ 			  rc.request().toWebSocket(ar -> 
 			  {
 
 				  LOGGER.info("upgrading to websocket");
@@ -294,21 +301,13 @@ public class WebService extends AbstractVerticle
 					wsClient.setConnectionId(websocket.textHandlerID());
 					wsClient.setWsConnection(websocket);
 					wsClient.setTimestamp(timeStamp);
-					wsClient.setWorkerName(agent);
+					wsClient.setEndpoint(endpoint);
 					
 					LOGGER.info("Sending client welcome message: "+ websocket.textHandlerID());
-					wsClient.getWsConnection().writeTextMessage("Connected to coordinator as agent: " + agent);
-					wsClient.getWsConnection().writeTextMessage("Test");
+					wsClient.getWsConnection().writeTextMessage("Connected to coordinator as " + type + " connected for: " + access + " access on endpoint known as:" + endpoint);
 					wsClients.add(wsClient);
 					
-					if(agent.compareToIgnoreCase("compass") ==0)
-					{
-						//compassWsClients.add(wsClient);
-					}
-					if(agent.compareToIgnoreCase("temperature") ==0)
-					{
-						//compassWsClients.add(wsClient);
-					}
+					
 					LOGGER.info("Have added client "+ websocket.textHandlerID() +" to the list of active connections");
 
 					/******************************************************************************/
@@ -316,7 +315,7 @@ public class WebService extends AbstractVerticle
 					/******************************************************************************/  
 		            vertx.eventBus().consumer(CHAT_CHANNEL, message -> 
 					{
-						  LOGGER.info("Consuming message from "+ CHAT_CHANNEL + " client " +websocket.textHandlerID() + " sent to server by "+ wsClient.getWorkerName() +": " + (String)message.body());
+						  LOGGER.info("Consuming message from "+ CHAT_CHANNEL + " client " +websocket.textHandlerID() + " sent to server by "+ wsClient.getEndpoint() +": " + (String)message.body());
 						 //websocket.writeTextMessage((String)message.body());
 					});
 		            /*************************************************************************/
@@ -324,23 +323,24 @@ public class WebService extends AbstractVerticle
 					/*************************************************************************/  
 		            websocket.textMessageHandler(message -> 
 					{
-						  LOGGER.info("Consuming message from client: " + websocket.textHandlerID() +" under control of: "+ wsClient.getWorkerName() + " :"+  (String)message); 
+						  LOGGER.info("Consuming message from client: " + websocket.textHandlerID() +" under control of: "+ wsClient.getEndpoint() + " :"+  (String)message); 
 						  
 						  JsonObject jo =  new JsonObject((String)message);
-						  LOGGER.info("agent:" + wsClient.getWorkerName());
+						  
+						  LOGGER.info("endpoint:" + wsClient.getEndpoint());
 						  LOGGER.info("version:" + jo.getString("version"));
 						  LOGGER.info("data:" + jo.getString("data"));
-						  LOGGER.info("agent_ip:" + jo.getString("agent_ip"));
+						  LOGGER.info("ip:" + jo.getString("ip"));
 						  
 						  JsonObject jo_worker =  new JsonObject();
 						  
-						  jo_worker.put("workerName", wsClient.getWorkerName());
+						  jo_worker.put("endpoint", wsClient.getEndpoint());
 						  jo_worker.put("version", jo.getString("version"));
 						  jo_worker.put("data", jo.getString("data"));
-						  jo_worker.put("worker_ip", jo.getString("worker_ip"));
+						  jo_worker.put("ip", jo.getString("ip"));
 						  jo_worker.put("epoch", generateEpoch());
 						  
-						  if(wsClient.getWorkerName().compareToIgnoreCase("compass")==0)
+						  if(wsClient.getEndpoint().compareToIgnoreCase("compass")==0)
 						  {
 							  CompassVar = jo.getString("data");
 						  }
@@ -352,11 +352,11 @@ public class WebService extends AbstractVerticle
 					{
 						  LOGGER.info("client disconnection detected: "+websocket.textHandlerID());
 						  cleanConnections(wsClients, websocket);
-						  if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
+						  if(wsClient.getEndpoint().compareToIgnoreCase("dashboard") == 0)
 						  {
 			            		cleanConnections(dashboardWsClients, websocket);
 						  }
-						  LOGGER.info("Have removed active connection: "+ websocket.textHandlerID() +" from list that was under control of: " + wsClient.getWorkerName());
+						  LOGGER.info("Have removed active connection: "+ websocket.textHandlerID() +" from list that was under control of: " + wsClient.getEndpoint());
 						  LOGGER.info("There are currently " + wsClients.size() + " active client connections");
 					});
 		            /**********************************************************************/
@@ -366,9 +366,9 @@ public class WebService extends AbstractVerticle
 		            {
 		            	LOGGER.error("An exception has been raised for client: " + websocket.textHandlerID() + " error:" + e.getMessage());
 		            	websocket.close();
-		            	LOGGER.error("The broken connection to: " + websocket.textHandlerID() +" under control of " + wsClient.getWorkerName() + " has been removed");
+		            	LOGGER.error("The broken connection to: " + websocket.textHandlerID() +" under control of " + wsClient.getEndpoint() + " has been removed");
 		            	cleanConnections(wsClients, websocket);
-		            	if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
+		            	if(wsClient.getEndpoint().compareToIgnoreCase("dashboard") == 0)
 		            	{
 		            		cleanConnections(dashboardWsClients, websocket);
 		            	}
@@ -380,198 +380,7 @@ public class WebService extends AbstractVerticle
 		        	  LOGGER.error("Error" + ar.cause().getMessage());
 		          }
 		        });
-				  
-				  
-				  
-				  
-				  
-				  
-				  
-				  
 			  });
-		  /******************************************************************************/
-		  /* This is how we send a message to an agent - in the normal course of operation we should not need to do this. Useful for a "repeat or confirm"
-		  /******************************************************************************/
-		  router.route("/agent/write/:agent").handler(rc -> 
-		  {
-			  String agent = rc.pathParam("agent");
-			  LOGGER.info("websocket agent connected: " + agent);
-			 
-			  rc.request().toWebSocket(ar -> 
-			  {
-				  
-			  });
-			  
-		  });
-		  /******************************************************************************/
-		  /* This is how we handle data sent from a worker - in the normal course of operation we should not need to do this. Useful for a "repeat or confirm"
-		  /******************************************************************************/
-		  router.route("/worker/read/:worker").handler(rc -> 
-		  {
-			  String worker = rc.pathParam("worker");
-			  LOGGER.info("websocket worker connected: " + worker);
-			 
-			  rc.request().toWebSocket(ar -> 
-			  {
-				  LOGGER.info("upgrading to websocket");
-		          if (ar.succeeded()) 
-		          {
-		            ServerWebSocket websocket = ar.result();
-		            
-		            
-		            LOGGER.info("successfully upgraded to websocket");
-		            //websocket.writeTextMessage("Pong!");
-		            
-		            WebSocketClient wsClient = new WebSocketClient();
-		            LOGGER.info("client connected: "+ websocket.textHandlerID());
-		            String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date());
-					  
-					wsClient.setConnectionId(websocket.textHandlerID());
-					wsClient.setWsConnection(websocket);
-					wsClient.setTimestamp(timeStamp);
-					wsClient.setWorkerName(worker);
-					
-					
-					wsClients.add(wsClient);
-					
-					//We will listen to all datasources - but we want a list of dashboard connections that we want to connect to.
-					if(worker.compareToIgnoreCase("dashboard") ==0)
-					{
-						dashboardWsClients.add(wsClient);
-					}
-						
-							
-					
-					LOGGER.info("Have added client "+ websocket.textHandlerID() +" to the list of active connections");
-
-					/******************************************************************************/
-					/* This is what we do when we recieve a message from an entire chat channel   */
-					/******************************************************************************/  
-		            vertx.eventBus().consumer(CHAT_CHANNEL, message -> 
-					{
-						  LOGGER.info("Consuming message from "+ CHAT_CHANNEL + " client " +websocket.textHandlerID() + " sent to server by "+ wsClient.getWorkerName() +": " + (String)message.body());
-						 //websocket.writeTextMessage((String)message.body());
-					});
-		            /*************************************************************************/
-					/* This is what we do when we recieve a message to an individual client  */
-					/*************************************************************************/  
-		            websocket.textMessageHandler(message -> 
-					{
-						  LOGGER.info("Consuming message from client: " + websocket.textHandlerID() +" under control of: "+ wsClient.getWorkerName() + " :"+  (String)message); 
-						  //vertx.eventBus().publish(CHAT_CHANNEL,message);
-						  
-						  /*
-						  JsonObject jo = new JsonObject();
-						  jo.put("client", wsClient.getUsername());
-						  jo.put("message", (String)message);
-						  */
-						  
-						  JsonObject jo =  new JsonObject((String)message);
-						  LOGGER.info("workerName:" + wsClient.getWorkerName());
-						  LOGGER.info("version:" + jo.getString("version"));
-						  LOGGER.info("data:" + jo.getString("data"));
-						  LOGGER.info("worker_ip:" + jo.getString("worker_ip"));
-						  
-						  
-						  JsonObject jo_worker =  new JsonObject();
-						  jo_worker.put("workerName", wsClient.getWorkerName());
-						  jo_worker.put("version", jo.getString("version"));
-						  jo_worker.put("data", jo.getString("data"));
-						  jo_worker.put("worker_ip", jo.getString("worker_ip"));
-						  jo_worker.put("epoch", generateEpoch());
-						  
-						  if(wsClient.getWorkerName().compareToIgnoreCase("compass")==0)
-						  {
-							  CompassVar = jo.getString("data");
-						  }
-						  
-						  generateDashboardData(jo_worker);
-						 
-						  /*
-						  JsonArray ja = Dashboard.getWorkerData();
-						  boolean workerExists = false;
-						  
-						  
-						  LOGGER.info("Dashboard size: " + ja.size());
-						  for (int i = 0; i < ja.size(); i++) 
-						  {
-							  JsonObject hold_jo = ja.getJsonObject(i);
-							  LOGGER.info("Dashboard object selected");
-							  if(hold_jo.containsKey("workerName") == true)
-							  {
-								  String hold_jo_workerName = hold_jo.getString("workerName");
-								  LOGGER.info("worker name: " + hold_jo_workerName);
-								  LOGGER.info("wsClient worker name: " + wsClient.getWorkerName());
-								  if(hold_jo_workerName.compareToIgnoreCase(wsClient.getWorkerName()) == 0)
-								  {
-									  hold_jo.put("workerName", wsClient.getWorkerName());
-									  hold_jo.put("version", jo.getString("version"));
-									  hold_jo.put("data", jo.getString("data"));
-									  hold_jo.put("worker_ip", jo.getString("worker_ip"));
-									  
-									  LOGGER.info("Have updated an object inside the JsonArray");
-									  
-									  workerExists = true;
-								  }
-							  }
-						  }
-						  if(!workerExists)
-						  {
-							  JsonObject hold_jo_worker =  new JsonObject();
-							  hold_jo_worker.put("workerName", wsClient.getWorkerName());
-							  hold_jo_worker.put("version", jo.getString("version"));
-							  hold_jo_worker.put("data", jo.getString("data"));
-							  hold_jo_worker.put("worker_ip", jo.getString("worker_ip"));
-							  
-							  ja.add(hold_jo_worker);
-							  
-							  LOGGER.info(">>>>>>>>>>>>>>>>>> ---- Have created a new object inside the JsonArray");
-						  }
-						  
-						  LOGGER.info("Data JSON Array: " + ja.encodePrettily());
-						  Dashboard.setWorkerData(ja);
-						  updateDashboard(ja.encodePrettily());
-						  //updateDashboard(jo_worker.encode());*/
-					});
-		            /*****************************************************************/
-					/* This is how we handle a websocket closing                     */
-					/*****************************************************************/ 
-		            websocket.closeHandler(message ->
-					{
-						  LOGGER.info("client disconnection detected: "+websocket.textHandlerID());
-						  cleanConnections(wsClients, websocket);
-						  if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
-						  {
-			            		cleanConnections(dashboardWsClients, websocket);
-						  }
-						  LOGGER.info("Have removed active connection: "+ websocket.textHandlerID() +" from list that was under control of: " + wsClient.getWorkerName());
-						  LOGGER.info("There are currently " + wsClients.size() + " active client connections");
-						  
-						  
-					  });
-		            /**********************************************************************/
-		            /*	This is how we handle exceptions in the websocket
-		           	/**********************************************************************/
-		            websocket.exceptionHandler(e->
-		            {
-		            	LOGGER.error("An exception has been raised for client: " + websocket.textHandlerID() + " error:" + e.getMessage());
-		            	websocket.close();
-		            	LOGGER.error("The broken connection to: " + websocket.textHandlerID() +" under control of " + wsClient.getWorkerName() + " has been removed");
-		            	cleanConnections(wsClients, websocket);
-		            	if(wsClient.getWorkerName().compareToIgnoreCase("dashboard") == 0)
-		            	{
-		            		cleanConnections(dashboardWsClients, websocket);
-		            	}
-		            });
-		            
-		          }
-		          if (ar.failed())
-		          {
-		        	  LOGGER.error("Error" + ar.cause().getMessage());
-		          }
-		        });
-			  
-		  });
 	  }
 	  /**********************************************************************************/
 	  public void generateDashboardData(JsonObject jo_worker)
@@ -589,30 +398,30 @@ public class WebService extends AbstractVerticle
 		  {
 			  JsonObject hold_jo = ja.getJsonObject(i);
 			  LOGGER.info("Dashboard object selected");
-			  if(hold_jo.containsKey("workerName") == true)
+			  if(hold_jo.containsKey("endpoint") == true)
 			  {
-				  String hold_jo_workerName = hold_jo.getString("workerName");
-				  LOGGER.info("worker name: " + hold_jo_workerName);
-				  LOGGER.info("wsClient worker name: " + jo_worker.getString("workerName"));
-				  if(hold_jo_workerName.compareToIgnoreCase(jo_worker.getString("workerName")) == 0)
+				  String hold_jo_workerName = hold_jo.getString("endpoint");
+				  LOGGER.info("endpoint: " + hold_jo_workerName);
+				  LOGGER.info("wsClient endpoint: " + jo_worker.getString("workerName"));
+				  if(hold_jo_workerName.compareToIgnoreCase(jo_worker.getString("endpoint")) == 0)
 				  {
-					  hold_jo.put("workerName", jo_worker.getString("workerName"));
+					  hold_jo.put("endpoint", jo_worker.getString("endpoint"));
 					  hold_jo.put("version", jo_worker.getString("version"));
 					  hold_jo.put("data", jo_worker.getString("data"));
-					  hold_jo.put("worker_ip", jo_worker.getString("worker_ip"));
+					  hold_jo.put("ip", jo_worker.getString("ip"));
 					  hold_jo.put("epoch", generateEpoch());
 					  
 					  LOGGER.info("Have updated an object inside the JsonArray");
 					  workerExists = true;
 				  }
 				  /*Auto Heading Adjustment*/
-				  if(hold_jo.getString("workerName").compareToIgnoreCase("compass")==0)
+				  if(hold_jo.getString("endpoint").compareToIgnoreCase("compass")==0)
 				  {
 					  heading = Integer.parseInt(hold_jo.getString("data"));
 					  
 					  LOGGER.info("heading:" + heading);
 				  }
-				  if(hold_jo.getString("workerName").compareToIgnoreCase("autopilotControl_target")==0)
+				  if(hold_jo.getString("endpoint").compareToIgnoreCase("autopilotControl_target")==0)
 				  {
 					  destintation = Integer.parseInt(hold_jo.getString("data"));
 					  hold_jo.put("epoch", generateEpoch());
@@ -620,13 +429,13 @@ public class WebService extends AbstractVerticle
 				  }
 				  correction = heading - destintation;
 				  
-				  if(hold_jo.getString("workerName").compareToIgnoreCase("autopilotControl_turn")==0)
+				  if(hold_jo.getString("endpoint").compareToIgnoreCase("autopilotControl_turn")==0)
 				  {
 					  hold_jo.put("data", calculateDirectionOfTurn(correction));
 					  hold_jo.put("epoch", generateEpoch());
 				  }
 				  
-				  if(hold_jo.getString("workerName").compareToIgnoreCase("autopilotControl_agent")==0)
+				  if(hold_jo.getString("endpoint").compareToIgnoreCase("autopilotControl_agent")==0)
 				  {
 					  tillerMove = Integer.parseInt(hold_jo.getString("data"));
 					  
@@ -754,7 +563,7 @@ public class WebService extends AbstractVerticle
 		  while(clients.hasNext())
 		  {
 			  WebSocketClient hold = clients.next();
-			  if(hold.getWorkerName().compareToIgnoreCase(username)==0)
+			  if(hold.getEndpoint().compareToIgnoreCase(username)==0)
 			  {
 				  LOGGER.info("Have found a match for username: " + username + " id: "+ hold.getWsConnection().textHandlerID());
 				  hold.getWsConnection().writeTextMessage("hello username");
