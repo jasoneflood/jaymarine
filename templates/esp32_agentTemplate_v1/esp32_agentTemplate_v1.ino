@@ -27,6 +27,8 @@ const char* ss_password = "passpass";
 
 String WORKER_IP_ADDRESS = "0.0.0.0";
 
+String jsonSensorString ="";
+
 String SOCKET_SERVER_IP_ADDRESS = "0.0.0.0";
 String SOCKET_SERVER_PORT = "3200";
 
@@ -46,6 +48,10 @@ struct {
   char socket_server_ip[50]= "";
   char socket_server_port[8]="";
 } configData;
+
+
+const size_t capacity = JSON_OBJECT_SIZE(500); // Adjust size based on elements
+DynamicJsonDocument doc(capacity);
 
 
 const char stream_html[]  PROGMEM = R"rawliteral(
@@ -510,13 +516,48 @@ String IpAddress2String(IPAddress ipAddress)
   String(ipAddress[3])  ;
 }
 /************************************************/
-void sensor_data() 
+String generateTestData_intAsString()
 {
- 
+     int random_int = random(0,361); //returns a number between 0 and 360
+     String random_string = String(random_int);
+     return random_string;
+}
+/**************************************************************************************************************************************/
+/*
+/* Change the code below these lines to suit your sensor.
+/*
+/**************************************************************************************************************************************/
+String generateSensorData()
+{
+  
+  String jsonData ="{\"version\":";
+  jsonData += "\"version\"";
+  jsonData += ",\"data\":\"";
+  jsonData += generateTestData_intAsString();
+  jsonData += "\",\"ip\":";
+  jsonData += "\"";
+  jsonData += WORKER_IP_ADDRESS;
+  jsonData += ",\"endpoint\":";
+  jsonData += "\"";
+  jsonData += "configData.workerName";
+  jsonData +="\"}";
+  
+
+  Serial.println(jsonData);
+
+  
+  return jsonData;
+
 }
 /************************************************/
 void loop() 
 {
   webSocket.loop();
+    String hold = generateSensorData();
+    webSocket.sendTXT(hold);
   delay(150);
 }
+
+
+
+
