@@ -398,6 +398,8 @@ void takeAction(char * myPayload)
         hearbeatjsonData += "\"";
         hearbeatjsonData += epoch;
         hearbeatjsonData +="\"}";
+
+        webSocket.sendTXT(hearbeatjsonData);
       }
     }
 }
