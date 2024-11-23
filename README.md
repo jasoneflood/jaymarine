@@ -10,15 +10,14 @@ An agent is a sensor for instance a temperature sensor. Its only job is to captu
 
 Agent payload:
 
-```js
-function myFunction () {
-   return 42;
+```
+{
+	"version": "1",
+	"data": "213",
+	"ip": "192.168.75.21",
+	"endpoint": "compass"
 }
 ```
-
-LOGGER.info("version:" + jo.getString("version"));
-						  LOGGER.info("data:" + jo.getString("data"));
-						  LOGGER.info("ip:" + jo.getString("ip"));
 
 
 
