@@ -91,3 +91,28 @@ heartbeat request can be sent to any connected worker or agent websocket end poi
 
 ## consumer
 A consumer can be a dashboard or any other interface that allows a human access to the co-ordinator. The coordinator and consumer are intentionally separate and MUST remain that way. This is to allow consumers to be made in a variety of different languages/tools and devices without impacting the core backbone.
+
+
+### /websocket/consumer/admin/dashboard
+
+This is an example payload sent from the co-ordinator to the consumer. This is an array of data that represents the most recent data sent by the agents. 
+
+```
+consumer:[
+{
+	"version": "1",
+	"data": "213",
+	"ip": "192.168.75.21",
+	"endpoint": "compass",
+	"epoch":"127272212"
+},
+{
+	"version": "1",
+	"data": "17",
+	"ip": "192.168.75.15",
+	"endpoint": "temperature",
+	"epoch":"127272217"
+}
+]
+```
+
