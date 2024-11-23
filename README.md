@@ -18,7 +18,19 @@ This data is sent from an agent to the co-ordinator.
 	"endpoint": "compass"
 }
 ```
-The data is a String that the co-ordinator will treat depending on the endpoint. So the endpoint will determine if the string should be cast to an int or interpreted as a string for example. A heartbeat response data back to coordinator from the agent is "OK". 
+
+heartbeat response
+
+```
+{
+	"version": "1",
+	"data": "OK",
+	"endpoint": "compass",
+	"epoch":"127272212"
+}
+```
+
+The data is a String that the co-ordinator will treat depending on the endpoint. So the endpoint will determine if the string should be cast to an int or interpreted as a string for example. A heartbeat response data back to coordinator from the agent is "OK" and the same epoch that was sent by the co-ordinator in the heartbeat request.
 
 
 
@@ -34,13 +46,35 @@ This data is sent from the co-ordinator to the worker.
 	"version": "1",
 	"data": "off",
 	"ip": "192.168.75.21",
+	"endpoint": "tiller",
+	"epoch":"127272212"
 }
 ```
-The data sent from the co-ordinator can only be a string.  The endpoint will determine if the string should be cast to an int or interpreted as a string for example. A heartbeat response data back to co-ordinator from the worker is "OK".
+heartbeat response
+
+```
+{
+	"version": "1",
+	"data": "OK",
+	"endpoint": "tiller"
+	"epoch":"127272212"
+	
+}
+```
+
+The data sent from the co-ordinator can only be a string.  The endpoint will determine if the string should be cast to an int or interpreted as a string for example. A heartbeat response data back to co-ordinator from the worker is "OK" and the same epoch that was sent by the co-ordinator in the heartbeat request.
 
 
 ## coordinator
 A coordinator is the brains of the operation. It takes in data from its agents, performs calculations and passes these instructions to the required worker. It is the heart of Jaymarine. All intelligence and design patterns should be implemented EXCLUSIVELY in the co-ordinator. The coordinator should be considered headless.
+
+```
+{
+	"version": "1",
+	"data": "heartbeat",
+	"epoch":"127272212"
+}
+```
 
 
 
