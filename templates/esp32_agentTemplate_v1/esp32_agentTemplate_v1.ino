@@ -306,6 +306,48 @@ String processor(const String& var)
   return String();
 }
 /*******************************************************/
+/**************************************************************************************************************************************/
+String IpAddress2String(IPAddress ipAddress)
+{
+  return String(ipAddress[0]) + String(".") +\
+  String(ipAddress[1]) + String(".") +\
+  String(ipAddress[2]) + String(".") +\
+  String(ipAddress[3])  ;
+}
+/************************************************/
+String generateTestData_intAsString()
+{
+     int random_int = random(0,361); //returns a number between 0 and 360
+     String random_string = String(random_int);
+     return random_string;
+}
+/************************************************/
+String getAgentVersion()
+{
+  String version = "1";
+  return version;
+}
+/************************************************/
+String getAgentIP()
+{
+  String ip = WORKER_IP_ADDRESS;
+  return ip;
+}
+/************************************************/
+String getAgentData()
+{
+  String data = generateTestData_intAsString();
+  return data;
+}
+/************************************************/
+String getAgentEndpoint()
+{
+  String endpoint = "configData.workerName";
+  return endpoint;
+}
+/**************************************************************************************************************************************/
+
+
 void takeAction(char * myPayload)
 {
      DeserializationError error = deserializeJson(doc, myPayload);
@@ -331,6 +373,32 @@ void takeAction(char * myPayload)
       Serial.println(data);
       Serial.print("epoch: ");
       Serial.println(epoch);
+
+
+
+      if(data == "heartbeat")
+      {
+        String version = getAgentVersion();
+        String data = getAgentData();
+        String ip = getAgentIP();
+        String endpoint = getAgentEndpoint();
+         
+        String hearbeatjsonData ="{\"version\":";
+        hearbeatjsonData += "\""+version+"\"";
+        hearbeatjsonData += ",\"data\":\"";
+        hearbeatjsonData += data;
+        hearbeatjsonData += "\",\"ip\":";
+        hearbeatjsonData += "\"";
+        hearbeatjsonData += ip;
+        hearbeatjsonData += "\",\"endpoint\":";
+        hearbeatjsonData += "\"";
+        hearbeatjsonData += endpoint;
+        hearbeatjsonData +="\"";
+        hearbeatjsonData += "\",\"epoch\":";
+        hearbeatjsonData += "\"";
+        hearbeatjsonData += epoch;
+        hearbeatjsonData +="\"}";
+      }
     }
 }
 
@@ -387,6 +455,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length)
 			break;
 	}
 }
+
 
 
 void setup() 
@@ -529,53 +598,14 @@ void setup()
 	webSocket.setReconnectInterval(5000);
   Serial.println("Websocket started");
 }
-/************************************************/
-String IpAddress2String(IPAddress ipAddress)
-{
-  return String(ipAddress[0]) + String(".") +\
-  String(ipAddress[1]) + String(".") +\
-  String(ipAddress[2]) + String(".") +\
-  String(ipAddress[3])  ;
-}
-/************************************************/
-String generateTestData_intAsString()
-{
-     int random_int = random(0,361); //returns a number between 0 and 360
-     String random_string = String(random_int);
-     return random_string;
-}
+
 /**************************************************************************************************************************************/
 /*
 /* Change the code below these lines to suit your sensor.
 /*
+/***************************************************************************************************************************************/
 
 
-/**************************************************************************************************************************************/
-String getAgentVersion()
-{
-  String version = "1";
-  return version;
-}
-
-String getAgentIP()
-{
-  String ip = WORKER_IP_ADDRESS;
-  return ip;
-}
-
-String getAgentData()
-{
-  String data = generateTestData_intAsString();
-  return data;
-}
-
-String getAgentEndpoint()
-{
-  String endpoint = "configData.workerName";
-  return endpoint;
-}
-
-/**************************************************************************************************************************************/
 String generateSensorData()
 {
   
