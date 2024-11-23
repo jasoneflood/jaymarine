@@ -8,6 +8,20 @@ An Open Alternative To Marine Solutions. What we try to create is effective, per
 ## agent
 An agent is a sensor for instance a temperature sensor. Its only job is to capture data and pass the data on to the co-ordinator. It is intentionally dumb.
 
+Agent payload:
+
+```js
+function myFunction () {
+   return 42;
+}
+```
+
+LOGGER.info("version:" + jo.getString("version"));
+						  LOGGER.info("data:" + jo.getString("data"));
+						  LOGGER.info("ip:" + jo.getString("ip"));
+
+
+
 ## worker
 A worker is essentially an on/off switch. For example a fan that can turn on and off. It is intentionally dumb and has no awareness for why it is going on and off. It simply follows instructions from the co-ordinator. *For saftey we may want a worker to perform a sanity check with an agent, for this reason its considered that we may require a validation route from worker to agent. This should be an exception and not the rule*
 
