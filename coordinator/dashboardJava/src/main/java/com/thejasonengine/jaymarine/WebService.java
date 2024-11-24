@@ -23,6 +23,7 @@ import com.thejasonengine.dashboard.Dashboard;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
@@ -38,7 +39,8 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.handler.TemplateHandler;
 import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
-
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
+import io.vertx.core.eventbus.EventBus;
 
 public class WebService extends AbstractVerticle 
 {
@@ -75,6 +77,12 @@ public class WebService extends AbstractVerticle
 		 
 		  
 		  startClient(vertx);
+		  
+		  vertx.deployVerticle(new PublisherVerticle());
+	      vertx.deployVerticle(new SubscriberVerticle());
+	      vertx.deployVerticle(new ResponderVerticle());
+	      vertx.deployVerticle(new RequesterVerticle());
+	      //vertx.deployVerticle(new ClusterVerticle());
 		 
 	  }
 	  /******************************************************************************/
@@ -149,6 +157,11 @@ public class WebService extends AbstractVerticle
 				  }
 			  });
 			});
+		  
+		  router.get("/connections/:type").handler(BodyHandler.create()).handler(rc -> {});
+		  router.post("/connections/remove/:id").handler(BodyHandler.create()).handler(rc -> {});
+		  router.post("/connections/message/:id").handler(BodyHandler.create()).handler(rc -> {});
+		  
 		  
 		  
 		  router.post("/input/:datasource").handler(BodyHandler.create()).handler(rc -> 
@@ -721,6 +734,99 @@ public class WebService extends AbstractVerticle
 	    	else
 	    	{
 	    		LOGGER.info("Context is null so force starting it");
+	    	}
+	    }
+	  	
+	  	
+	  	
+	  	
+	  	/******************************************************************************************************/
+	 // Publisher Verticle
+	    static class PublisherVerticle extends AbstractVerticle {
+	        @Override
+	        public void start() {
+	            EventBus eventBus = vertx.eventBus();
+	            eventBus.publish("jaymarine", "Jaymarine feed!");
+	            // Periodically send messages
+	            
+	            vertx.setPeriodic(1000, id -> {
+	                eventBus.publish("jaymarine", "JayMarine feed!");
+	            });
+	        }
+	    }
+
+	    // Subscriber Verticle
+	    static class SubscriberVerticle extends AbstractVerticle {
+	        @Override
+	        public void start() {
+	            EventBus eventBus = vertx.eventBus();
+
+	            // Register a consumer for the "news-feed" address
+	            eventBus.consumer("agent-feed", message -> {
+	                LOGGER.debug("Received message: " + message.body());
+	            });
+	            
+	            // Register a consumer for the "news-feed" address
+	            eventBus.consumer("cluster-data", message -> {
+	                LOGGER.debug("Received cluster message: " + message.body());
+	            });
+	            
+	            
+	        }
+	    }
+	    
+	    // Responder Verticle
+	    static class ResponderVerticle extends AbstractVerticle {
+	        @Override
+	        public void start() {
+	            EventBus eventBus = vertx.eventBus();
+
+	            // Register a consumer that replies to requests
+	            eventBus.consumer("greetings", message -> {
+	                String name = (String) message.body();
+	                message.reply("Hello, " + name + "!");
+	            });
+	        }
+	    }
+
+	    // Requester Verticle
+	    static class RequesterVerticle extends AbstractVerticle {
+	        @Override
+	        public void start() {
+	            EventBus eventBus = vertx.eventBus();
+
+	            // Send a request and handle the reply
+	            eventBus.request("greetings", "Alice", reply -> {
+	                if (reply.succeeded()) {
+	                    LOGGER.debug("Reply: " + reply.result().body());
+	                } else {
+	                    LOGGER.debug("Failed to get a reply");
+	                }
+	            });
+	        }
+	    }
+	    
+	    //Cluster
+	    static class ClusterVerticle extends AbstractVerticle {
+	    	@Override
+	    	public void start() {
+	    		HazelcastClusterManager mgr = new HazelcastClusterManager();
+	            VertxOptions options = new VertxOptions().setClusterManager(mgr);
+
+	            Vertx.clusteredVertx(options, res -> {
+	                if (res.succeeded()) {
+	                    Vertx vertx = res.result();
+	                    EventBus eventBus = vertx.eventBus();
+
+	                    eventBus.consumer("cluster-data", message -> {
+	                       LOGGER.info("Received message: " + message.body());
+	                    });
+
+	                    eventBus.publish("cluster-data", "Hello from the cluster!");
+	                } else {
+	                    LOGGER.error("Failed to start clustered Vert.x");
+	                }
+	            });
 	    	}
 	    }
 }
