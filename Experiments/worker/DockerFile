@@ -1,0 +1,11 @@
+# Use OpenJDK as the base image
+FROM openjdk:17-jdk-slim
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the compiled JAR file into the container
+COPY target/my-vertx-app.jar /app/my-vertx-app.jar
+
+# Run the application
+CMD ["java", "-jar", "my-vertx-app.jar"]

@@ -1,0 +1,8 @@
+# Build the Docker image
+docker build -t my-vertx-app .
+
+# Tag the image (for Docker Hub example)
+docker tag my-vertx-app <your-docker-username>/my-vertx-app:latest
+
+# Push to Docker Hub
+docker push <your-docker-username>/my-vertx-app:latest
