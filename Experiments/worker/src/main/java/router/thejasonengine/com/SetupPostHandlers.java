@@ -15,14 +15,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import authentication.thejasonengine.com.AuthUtils;
-import database.thejasonengine.com.DatabaseSetterTemplates;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.pgclient.PgConnectOptions;
+import io.vertx.sqlclient.Pool;
+import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.SqlConnection;
 import session.thejasonengine.com.SetupSession;
 
 public class SetupPostHandlers 
@@ -30,30 +36,51 @@ public class SetupPostHandlers
 	private static final Logger LOGGER = LogManager.getLogger(SetupPostHandlers.class);
 	
 	
-	public Handler<RoutingContext> validateCredentials;
-	/*public Handler<RoutingContext> createCookie;
-	public Handler<RoutingContext> createSession;
-	public Handler<RoutingContext> validateUserStatus;
-	public Handler<RoutingContext> webLogin;
-	public Handler<RoutingContext> setupSystemDatabase;
-	public DatabaseSetterTemplates DST;*/
-	
-	public SetupPostHandlers(Vertx vertx, DatabaseSetterTemplates v_DST)
+	public Handler<RoutingContext> simpleTest; 
+	public Handler<RoutingContext> simpleDBTest;
+
+		
+	public SetupPostHandlers(Vertx vertx)
     {
+		
+		simpleTest = SetupPostHandlers.this::handleSimpleTest;
+		simpleDBTest = SetupPostHandlers.this::handleSimpleDBTest;
+		
+		
+		/*
+		setupSystemDatabase = SetupPostHandlers.this::handleSetupSystemDatabase;
 		validateCredentials = SetupPostHandlers.this::handleValidateCredentials;
-		/*createCookie = SetupPostHandlers.this::handleCreateCookie;
+		createCookie = SetupPostHandlers.this::handleCreateCookie;
 		createSession = SetupPostHandlers.this::handleCreateSession;
 		validateUserStatus =  SetupPostHandlers.this::handleValidateUserStatus;
 		webLogin = SetupPostHandlers.this::handleWebLogin;
-		setupSystemDatabase = SetupPostHandlers.this::handleSetupSystemDatabase;
-		DST = v_DST;*/
+		setupSystemDatabase = SetupPostHandlers.this::handleSetupSystemDatabase;*/
+		//DST = v_DST;
 		
 	}
 	private static String decode(String encodedString) 
 	{
 	    return new String(Base64.getUrlDecoder().decode(encodedString));
 	}
-
+	/****************************************************************/
+	private void handleSimpleTest(RoutingContext routingContext)
+	{
+	
+		JsonObject PayloadJSON = new JsonObject();
+		PayloadJSON.put("username", "myusername");
+		PayloadJSON.put("password", "mypassword");
+		
+		LOGGER.info("Inside SetupPostHandlers.handleSimpleTest");
+		HttpServerResponse response = routingContext.response();
+		try 
+		{ 
+			
+		}
+		catch(Exception e)
+		{
+			LOGGER.error("Unable to complete simple test: " + e.toString());
+		}
+	}
 	/****************************************************************/
 	/*	
 	 	Accessed via route: /api/login
@@ -63,39 +90,85 @@ public class SetupPostHandlers
      		"password":"thePassword"
  		}
 	 */
-	private void handleSetupSystemDatabase(RoutingContext routingContext) 
+	private void handleSimpleDBTest(RoutingContext routingContext) 
 	{
 		
-		LOGGER.info("Inside SetupPostHandlers.handleValidateCredentials");  
+		LOGGER.info("Inside SetupPostHandlers.handleSimpleDBTest");  
+		
+		Context context = routingContext.vertx().getOrCreateContext();
+		
+		
+	/*PgConnectOptions connectOptions = new PgConnectOptions()
+			      .setHost("localhost")
+			      .setPort(5432)
+			      .setDatabase("SLP")
+			      .setUser("postgres")
+			      .setPassword("postgres");
+
+		// Create a connection pool (this uses the Pool interface from SqlClient)
+      PoolOptions poolOptions = new PoolOptions().setMaxSize(10); // Max pool size
+      LOGGER.debug("Set pool options");
+      Pool pool = Pool.pool(routingContext.vertx(), connectOptions, poolOptions);
+	
+		*/
+		Pool pool = context.get("pool");
+		
 		HttpServerResponse response = routingContext.response();
 		JsonObject loginPayloadJSON = routingContext.getBodyAsJson();
-		LOGGER.info(loginPayloadJSON);
 		
-		try 
-		{ 
-			/*DST.setUpDatabaseTables
-					    .execute(loginPayloadJSON)
-					    .onSuccess(result -> 
-					    {
-					    	LOGGER.info("Successfully ran querry: setUpDatabaseTables, at IP:" + routingContext.request().remoteAddress());
-					    	response
-				             .putHeader("content-type", "application/json")
-				             .end("{\"result\":\"Fail\", \"reason\": \""+result.toString()+"\"}"); 
+		response
+        .putHeader("content-type", "application/json");
 		
-					    }).onFailure(err -> 
-					    {
-					    	LOGGER.info("Unable to get connect: " + err + ", at IP:" + routingContext.request().remoteAddress());
-					    	response
-				             .putHeader("content-type", "application/json")
-				             .end("{\"result\":\"Fail\", \"reason\": \""+err.toString()+"\"}"); 
-				      		//routingContext.fail(500);
-					    });
-					    */
-		}
-		catch(Exception e)
-		{
-		  		LOGGER.info("ERROR: " + e.toString());
-		}
+		pool.getConnection(ar -> {
+            if (ar.succeeded()) {
+                SqlConnection connection = ar.result();
+                
+                JsonArray ja = new JsonArray();
+                
+                // Execute a SELECT query
+                connection.query("SELECT * FROM public.tb_user")
+                        .execute(res -> {
+                            if (res.succeeded()) 
+                            {
+                                // Process the query result
+                                RowSet<Row> rows = res.result();
+                                rows.forEach(row -> {
+                                    // Print out each row
+                                    LOGGER.info("Row: " + row.toJson());
+                                    try
+                                    {
+                                    	JsonObject jo = new JsonObject(row.toJson().encode());
+                                    	ja.add(jo);
+                                    	LOGGER.info("Successfully added json object to array");
+                                    }
+                                    catch(Exception e)
+                                    {
+                                    	LOGGER.error("Unable to add JSON Object to array: " + e.toString());
+                                    }
+                                    response.send(row.toJson().encodePrettily());
+                                });
+                            } 
+                            else 
+                            {
+                                // Handle query failure
+                            	LOGGER.error("error: " + res.cause() );
+                            	response.send(res.cause().getMessage());
+                                //res.cause().printStackTrace();
+                            }
+                            // Close the connection
+                            //response.end();
+                            connection.close();
+                        });
+            } else {
+                // Handle connection failure
+                ar.cause().printStackTrace();
+                response.send(ar.cause().getMessage());
+            }
+            
+        });
+		  
+		
+		
 	}
 	/****************************************************************/
 	

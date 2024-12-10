@@ -5,10 +5,12 @@ import org.apache.logging.log4j.Logger;
 
 
 import authentication.thejasonengine.com.AuthUtils;
+import database.thejasonengine.com.DatabaseController;
 import file.thejasonengine.com.Read;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -18,14 +20,12 @@ import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.jwt.JWT;
-import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.sqlclient.Pool;
 import router.thejasonengine.com.SetupPostHandlers;
 import session.thejasonengine.com.SetupSession;
 
@@ -39,6 +39,8 @@ public class ClusteredVerticle extends AbstractVerticle {
 	private AuthUtils AU;
 	private SetupSession setupSession;
 	private SetupPostHandlers setupPostHandlers;
+	private static Pool pool;
+	
 	
 	@Override
     public void start()
@@ -50,32 +52,41 @@ public class ClusteredVerticle extends AbstractVerticle {
 		LOGGER.error("This is an ClusteredVerticle 'ERROR' TEST MESSAGE");
 		
 		
+		
+		
 		EventBus eventBus = vertx.eventBus();
 		LOGGER.debug("Started the ClusteredVerticle Event Bus");
+		/*Created a vertx context*/
+		Context context = vertx.getOrCreateContext();
 		
-		Router router = Router.router(vertx);
-		
-		vertx.createHttpServer()
-        .requestHandler(router)
-        .listen(8080, res -> {
-            if (res.succeeded()) {
-                LOGGER.info("Server started on port 8080");
-            } else {
-                LOGGER.error("Failed to start server: " + res.cause());
-            }
-        });
-		
-		
+		/* Create a DB instance called jdbcClient and add it to the context */
+		DatabaseController DB = new DatabaseController(vertx);
 		
 		AU = new AuthUtils();
 		jwt = AU.createJWTToken(context);
-    	
+		
+		pool = context.get("pool");
+		
+		setupPostHandlers = new SetupPostHandlers(vertx);
+		LOGGER.info("Set Handlers Setup");
+		
+		
+		
+		Router router = Router.router(vertx);
+		
+		
+		LOGGER.debug("Setup the post handler");
 		
 		
 		
 		/*Create and add a session to the system*/
 		setupSession = new SetupSession(context.owner());
 		router.route().handler(setupSession.sessionHandler);
+		
+		
+		
+		
+		
 		
 		/*
 		Read.readFile(vertx, "mysettings.json");
@@ -84,6 +95,9 @@ public class ClusteredVerticle extends AbstractVerticle {
 		setRoutes(router);
 		LOGGER.debug("Started the ClusteredVerticle Router");
 		
+		
+		
+		//createSystemDatabase(vertx);
 		
 		
 		
@@ -96,8 +110,20 @@ public class ClusteredVerticle extends AbstractVerticle {
 		
 		setupPostHandlers = new SetupPostHandlers(vertx, DST);
 		LOGGER.info("Set Handlers Setup");
-		
 		*/
+		
+		
+		vertx.createHttpServer()
+        .requestHandler(router)
+        .listen(8080, res -> {
+            if (res.succeeded()) {
+                LOGGER.info("Server started on port 8080");
+            } else {
+                LOGGER.error("Failed to start server: " + res.cause());
+            }
+        });
+		
+		
 	}
 	/*****************************************************************************/
 	
@@ -106,6 +132,8 @@ public class ClusteredVerticle extends AbstractVerticle {
     {
     	
     	router.post("/login").handler(BodyHandler.create()).handler(this::handleLogin);
+    	router.get("/handler/simpleTest").handler(setupPostHandlers.simpleTest);
+    	router.get("/handler/simpleDBTest").handler(setupPostHandlers.simpleDBTest);
     	
     	//router.get("/api/setupSystemDatabase").handler(setupPostHandlers.setupSystemDatabase); 
     	
@@ -116,6 +144,9 @@ public class ClusteredVerticle extends AbstractVerticle {
                 .end("{\"message\":\"Hello get request!\"}");
         });
     	 
+    	
+    	//router.get("/simpleTest").handler(setupPostHandlers.simpleTest);
+    	
     	router.post("/post").handler(ctx -> {
     		// Respond with a simple JSON object
             ctx.response()
@@ -172,11 +203,15 @@ public class ClusteredVerticle extends AbstractVerticle {
 	    /*********************************************************************************/
 	  	/*This will log a user in {"result":"ok", "reason": "ok"}     				   */
         /*********************************************************************************/
-	    //router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
-	  	//  router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
-	  	//  router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
-	  	//  router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
-	  	  
+	    
+       
+        //router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
+        
+        /*
+        router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
+	  	router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
+	  	router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
+	  	*/  
 	  	  
 	  	//  router.post("/web/login").handler(BodyHandler.create()).handler(setupPostHandlers.webLogin);
         /******************************************************************************/
@@ -300,61 +335,7 @@ public class ClusteredVerticle extends AbstractVerticle {
                     .end("{\"message\": \"Invalid credentials\"}");
         }
     }
-    /*****************************************************************************/
-    /*public static void createSystemDatabase(Vertx vertx)
-    {
-    	// Configuration for the SQLite database
-        JsonObject config = new JsonObject();
-        config.put("url", "jdbc:sqlite:test.db");
-        config.put("driver_class", "org.sqlite.JDBC");
-        config.put("max_pool_size", 30); // Pool size
-
-        // Create a JDBC client
-        JDBCClient client = JDBCClient.createShared(vertx, config);
-
-        // Perform a database operation (e.g., creating a table)
-        client.getConnection(conn -> {
-            if (conn.succeeded()) {
-                SQLConnection connection = conn.result();
-
-                // Create a simple table
-                String createTableQuery = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)";
-                connection.execute(createTableQuery, createResult -> {
-                    if (createResult.succeeded()) {
-                        LOGGER.debug("Table created successfully.");
-                    } else {
-                        LOGGER.error("Error creating table: " + createResult.cause());
-                    }
-
-                    // Insert a sample row
-                    String insertQuery = "INSERT INTO users (name) VALUES ('Jason Doe')";
-                    connection.execute(insertQuery, insertResult -> {
-                        if (insertResult.succeeded()) {
-                            LOGGER.debug("Row inserted successfully.");
-
-                            // Query the data
-                            connection.query("SELECT * FROM users", queryResult -> {
-                                if (queryResult.succeeded()) {
-                                    queryResult.result().getRows().forEach(row -> {
-                                        LOGGER.debug("User: " + row.getString("name"));
-                                    });
-                                } else {
-                                    LOGGER.error("Query failed: " + queryResult.cause());
-                                }
-
-                                // Close the connection
-                                connection.close();
-                            });
-                        } else {
-                            LOGGER.error("Insert failed: " + insertResult.cause());
-                        }
-                    });
-                });
-            } else {
-                LOGGER.error("Connection failed: " + conn.cause());
-            }
-        });
-    }*/
+    
     /*****************************************************************************/
     private boolean verifyCookie(Cookie cookie)
     {

@@ -3,71 +3,45 @@ package database.thejasonengine.com;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.sql.SQLConnection;
+import io.vertx.pgclient.PgConnectOptions;
+import io.vertx.sqlclient.Pool;
+import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.SqlClient;
+import io.vertx.sqlclient.SqlConnection;
 
 public class DatabaseController 
 {
 	private static final Logger LOGGER = LogManager.getLogger(DatabaseController.class);
 	
-	public static JDBCClient createSystemDatabase(Vertx vertx)
-    {
-    	// Configuration for the SQLite database
-        JsonObject config = new JsonObject();
-        config.put("url", "jdbc:sqlite:test.db");
-        config.put("driver_class", "org.sqlite.JDBC");
-        config.put("max_pool_size", 30); // Pool size
+	
+	
+	public DatabaseController(Vertx vertx) 
+	{
+		 // PostgreSQL connection options
+		PgConnectOptions connectOptions = new PgConnectOptions()
+			      .setHost("localhost")
+			      .setPort(5432)
+			      .setDatabase("SLP")
+			      .setUser("postgres")
+			      .setPassword("postgres");
 
-        // Create a JDBC client
-        JDBCClient client = JDBCClient.createShared(vertx, config);
-        return client;
+		// Create a connection pool (this uses the Pool interface from SqlClient)
+        PoolOptions poolOptions = new PoolOptions().setMaxSize(10); // Max pool size
+        LOGGER.debug("Set pool options");
+        Pool pool = Pool.pool(vertx, connectOptions, poolOptions);
+        
+        LOGGER.debug("Pool Created");
+        
+        Context context = vertx.getOrCreateContext();
+        context.put("pool", pool);
+        LOGGER.debug("Pool added to context");
         
         
-        // Perform a database operation (e.g., creating a table)
-        
-        /*client.getConnection(conn -> {
-            if (conn.succeeded()) {
-                SQLConnection connection = conn.result();
+        LOGGER.info("JDBC Pool SET");
 
-                // Create a simple table
-                String createTableQuery = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)";
-                connection.execute(createTableQuery, createResult -> {
-                    if (createResult.succeeded()) {
-                        LOGGER.debug("Table created successfully.");
-                    } else {
-                        LOGGER.error("Error creating table: " + createResult.cause());
-                    }
-
-                    // Insert a sample row
-                    String insertQuery = "INSERT INTO users (name) VALUES ('Jason Doe')";
-                    connection.execute(insertQuery, insertResult -> {
-                        if (insertResult.succeeded()) {
-                            LOGGER.debug("Row inserted successfully.");
-
-                            // Query the data
-                            connection.query("SELECT * FROM users", queryResult -> {
-                                if (queryResult.succeeded()) {
-                                    queryResult.result().getRows().forEach(row -> {
-                                        LOGGER.debug("User: " + row.getString("name"));
-                                    });
-                                } else {
-                                    LOGGER.error("Query failed: " + queryResult.cause());
-                                }
-
-                                // Close the connection
-                                connection.close();
-                            });
-                        } else {
-                            LOGGER.error("Insert failed: " + insertResult.cause());
-                        }
-                    });
-                });
-            } else {
-                LOGGER.error("Connection failed: " + conn.cause());
-            }
-        });*/
     }
 
 }
