@@ -30,6 +30,11 @@ import router.thejasonengine.com.SetupPostHandlers;
 import session.thejasonengine.com.SetupSession;
 
 
+import io.vertx.ext.web.common.template.TemplateEngine;
+import io.vertx.ext.web.handler.FormLoginHandler;
+import io.vertx.ext.web.handler.TemplateHandler;
+import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
+
 
 public class ClusteredVerticle extends AbstractVerticle {
 	
@@ -93,6 +98,104 @@ public class ClusteredVerticle extends AbstractVerticle {
 		LOGGER.debug("Read the ClusteredVerticle mysettings.json");
 		*/
 		setRoutes(router);
+		
+		
+		FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
+		TemplateHandler templateHandler = TemplateHandler.create((TemplateEngine) engine);
+		/*Set Template*/
+		router.get("/dynamic/*").handler(templateHandler);
+		
+		router.getWithRegex(".+\\.ftl")
+		 .handler(ctx -> 
+				 {
+					 
+					 LOGGER.info("verifying access to the logged in file .ftl");
+			    		Cookie cookie = (Cookie) ctx.getCookie("JWT");
+			    		if (cookie != null) 
+			    		{
+			    			LOGGER.info("Found a cookie with the correct name");
+			    			if(verifyCookie(cookie))
+			    			{
+			    			 
+			    			 LOGGER.info(">>>>>>>>>>>>>>LOADING UP THE FTL WITH REQUIRED LOGIC VARIABLES>>>>>>>>>>>>>>>> : "+ctx.normalizedPath());
+			    			 String file2send = ctx.normalizedPath();
+			    			 
+			    			 	String tokenObjectString = cookie.getValue();
+			    			 	LOGGER.info("Cookie Value: " + tokenObjectString);
+			    			 	JWT jwtToken = new JWT();
+			    			 	LOGGER.info("Token value from cookie: " + tokenObjectString);
+			    				LOGGER.info("Token parsed: " + jwtToken.parse(tokenObjectString).toString());
+			    				
+			    				
+			    				/*We create a basic signature test case to see what we can see*/
+			    				JsonObject JWT_Validation_Test = new JsonObject(); 
+			    				JWT_Validation_Test.put("jwt", tokenObjectString);
+			    				
+			    				
+			    				
+			    				JsonObject JSON_JWT = jwtToken.parse(tokenObjectString);
+			    				
+			    				
+			    				
+			    				if(setupPostHandlers.validateJWTToken(JWT_Validation_Test))
+			    				{
+			    						JsonObject tokenObject = new JsonObject();
+					    				JsonObject hold = (JsonObject) JSON_JWT.getValue("payload");
+					    				
+					    				LOGGER.info("Username: " + hold.getString("username"));
+					    				
+					    				tokenObject.put("username", hold.getString("username"));
+					    				tokenObject.put("authlevel", hold.getInteger("authlevel"));
+					    				tokenObject.put("jwt", tokenObjectString);
+					    			 
+					    			 /* I wont use sessions lets just stick with the cookie
+					    			 String tokenString = setupSession.getTokenFromSession(ctx, "token");
+					    			 String tokenObjectString = setupSession.getTokenFromSession(ctx, "tokenObject");
+					    			 
+					    			 LOGGER.info("Session JWT: " + tokenString);
+					    			 LOGGER.info("Session tokenObject: " + tokenObjectString);
+					    			 */
+					    			 //JsonObject tokenObject = new JsonObject(tokenObjectString);
+					    			 
+					    			 
+					    			 
+					   				 engine.render(tokenObject, "templates/"+file2send.substring(1), 
+					   			     res -> 
+					   				 {
+					   		             if (res.succeeded()) 
+					   		             {
+					   		                 ctx.response().end(res.result());
+					   		             } 
+					   		             else 
+					   		             {
+					   		            	 ctx.fail(res.cause());
+					   		             }
+					   				 });
+			    				
+			    				}
+			    				else
+			    				{
+			    					LOGGER.error("**Potential security violation* The JWT from the cookie did not pass basic testing: " + ctx.normalizedPath() + ", From IP:" + ctx.request().remoteAddress());
+					    			LOGGER.info("Redirecting to: " + ctx.normalizedPath().substring(0,ctx.normalizedPath().indexOf("/")).concat("index.htm"));
+					    			ctx.redirect("../index.htm");
+			    				}
+			    				
+			    			}
+			    		}
+			    		else if (cookie == null) 
+			    		{
+			    			LOGGER.error("Did not find a cookie name JWT when calling the (.+\\\\.ftl) webpage: " + ctx.normalizedPath());
+			    			LOGGER.info("Redirecting to: " + ctx.normalizedPath().substring(0,ctx.normalizedPath().indexOf("/")).concat("index.htm"));
+			    			
+			    			ctx.redirect("../index.htm");
+			    			//ctx.response().sendFile("webroot/index.htm"); //drop starting slash
+			    		}
+					 
+					 
+					 
+				 });
+		
+		
 		LOGGER.debug("Started the ClusteredVerticle Router");
 		
 		
