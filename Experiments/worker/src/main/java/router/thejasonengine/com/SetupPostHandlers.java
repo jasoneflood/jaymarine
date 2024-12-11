@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import authentication.thejasonengine.com.AuthUtils;
+import database.thejasonengine.com.DatabaseController;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -22,6 +23,8 @@ import io.vertx.core.http.Cookie;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.JWTOptions;
+import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
@@ -29,6 +32,7 @@ import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
+import io.vertx.sqlclient.Tuple;
 import session.thejasonengine.com.SetupSession;
 
 public class SetupPostHandlers 
@@ -38,30 +42,32 @@ public class SetupPostHandlers
 	
 	public Handler<RoutingContext> simpleTest; 
 	public Handler<RoutingContext> simpleDBTest;
-
+	public Handler<RoutingContext> validateCredentials;
+	public Handler<RoutingContext> createCookie;
+	public Handler<RoutingContext> createSession;
+	public Handler<RoutingContext> validateUserStatus;
 		
 	public SetupPostHandlers(Vertx vertx)
     {
 		
 		simpleTest = SetupPostHandlers.this::handleSimpleTest;
 		simpleDBTest = SetupPostHandlers.this::handleSimpleDBTest;
-		
-		
-		/*
-		setupSystemDatabase = SetupPostHandlers.this::handleSetupSystemDatabase;
 		validateCredentials = SetupPostHandlers.this::handleValidateCredentials;
 		createCookie = SetupPostHandlers.this::handleCreateCookie;
 		createSession = SetupPostHandlers.this::handleCreateSession;
 		validateUserStatus =  SetupPostHandlers.this::handleValidateUserStatus;
-		webLogin = SetupPostHandlers.this::handleWebLogin;
-		setupSystemDatabase = SetupPostHandlers.this::handleSetupSystemDatabase;*/
+		
+		
+		//webLogin = SetupPostHandlers.this::handleWebLogin;
+		
 		//DST = v_DST;
 		
 	}
-	private static String decode(String encodedString) 
-	{
-	    return new String(Base64.getUrlDecoder().decode(encodedString));
-	}
+	/****************************************************************/
+	/*	
+	 	Accessed via get route: /api/simpleTest
+		- No Payload / Parameter - 
+	*/
 	/****************************************************************/
 	private void handleSimpleTest(RoutingContext routingContext)
 	{
@@ -83,35 +89,25 @@ public class SetupPostHandlers
 	}
 	/****************************************************************/
 	/*	
-	 	Accessed via route: /api/login
-	 	handleRegisterUser takes in a POST JSON Body Payload as:
-	 	{
-     		"username":"theUsername"
-     		"password":"thePassword"
- 		}
+	 	Accessed via get route: /api/simpleDBTest
+	 	- No Payload / Parameter -
 	 */
+	/****************************************************************/
 	private void handleSimpleDBTest(RoutingContext routingContext) 
 	{
 		
 		LOGGER.info("Inside SetupPostHandlers.handleSimpleDBTest");  
 		
 		Context context = routingContext.vertx().getOrCreateContext();
-		
-		
-	/*PgConnectOptions connectOptions = new PgConnectOptions()
-			      .setHost("localhost")
-			      .setPort(5432)
-			      .setDatabase("SLP")
-			      .setUser("postgres")
-			      .setPassword("postgres");
-
-		// Create a connection pool (this uses the Pool interface from SqlClient)
-      PoolOptions poolOptions = new PoolOptions().setMaxSize(10); // Max pool size
-      LOGGER.debug("Set pool options");
-      Pool pool = Pool.pool(routingContext.vertx(), connectOptions, poolOptions);
-	
-		*/
 		Pool pool = context.get("pool");
+		
+		if (pool == null)
+		{
+			LOGGER.debug("pull is null - restarting");
+			DatabaseController DB = new DatabaseController(routingContext.vertx());
+			LOGGER.debug("Taking the refreshed context pool object");
+			pool = context.get("pool");
+		}
 		
 		HttpServerResponse response = routingContext.response();
 		JsonObject loginPayloadJSON = routingContext.getBodyAsJson();
@@ -145,8 +141,9 @@ public class SetupPostHandlers
                                     {
                                     	LOGGER.error("Unable to add JSON Object to array: " + e.toString());
                                     }
-                                    response.send(row.toJson().encodePrettily());
+                                    
                                 });
+                                response.send(ja.encodePrettily());
                             } 
                             else 
                             {
@@ -166,21 +163,17 @@ public class SetupPostHandlers
             }
             
         });
-		  
-		
-		
 	}
 	/****************************************************************/
-	
-	/****************************************************************/
 	/*	
-	 	Accessed via route: /api/login
+	 	Accessed via post route: /api/login
 	 	handleRegisterUser takes in a POST JSON Body Payload as:
 	 	{
-     		"username":"theUsername"
+     		"username":"theUsername",
      		"password":"thePassword"
  		}
 	 */
+	/****************************************************************/
 	private void handleValidateCredentials(RoutingContext routingContext) 
 	{
 		
@@ -188,7 +181,6 @@ public class SetupPostHandlers
 		HttpServerResponse response = routingContext.response();
 		JsonObject loginPayloadJSON = routingContext.getBodyAsJson();
 		LOGGER.info(loginPayloadJSON);
-		
 		try 
 		  { 
 			//Make sure the context has the parameter that is expected.
@@ -202,80 +194,124 @@ public class SetupPostHandlers
 			    	//JsonObject temp = new JsonObject();
 			    	boolean verified = true;
 			    		
-			    	LOGGER.info("Setting user session for username: " + loginPayloadJSON.getValue("username"));
+			    	
 			    		
 			    	Map<String,Object> map = new HashMap<String, Object>();  
 				    map.put("username", loginPayloadJSON.getValue("username"));
 				    map.put("password", hashAndSaltPass(loginPayloadJSON.getValue("password").toString()));
-				   	/*
-			    	DST.login
-					    .execute(map)
-					    .onSuccess(result -> 
-					    {
-					    	Object obj = null; //We will use this to Create a JSON object of all the data we will use to drive a session.
-					        Iterator itor = result.iterator(); 
-					        while(itor.hasNext())                  // checks if there is an element to be visited.
-					        {
-					        	obj = itor.next(); //There should only be one.
-					        	LOGGER.debug("Recieved: " + obj);
-					        }
-					    if(obj == null)
-					    {
-					    	 response
-						        .putHeader("content-type", "application/json")
-						        .end("{\"result\":\"fail\", \"jwt\": \"Invalid credentials\"}");
-					    }
-					    else
-					    {
-					    	JsonObject dbObject = new JsonObject(obj.toString());
-						    LOGGER.info("Successfully ran query: login");
-						        	
-						    // Now we rediscover the context 
-						    Vertx vertx = routingContext.vertx();					        	
-						    Context context = vertx.getOrCreateContext();
-						        	
-						    FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
-					    	    	
-						    JWTAuth jwt;
-						    // Set up the authentication tokens 
-						    String name = "JWT";
-						    
-						    AuthenticationUtils AU = new AuthenticationUtils();
-						    jwt = AU.createJWTToken(context);
-						        	
-						    JsonObject tokenObject = new JsonObject();
-						        	
-						    tokenObject.put("id", dbObject.getValue("id"));
-						    tokenObject.put("firstname", dbObject.getValue("firstname"));
-						    tokenObject.put("surname", dbObject.getValue("surname"));
-						    tokenObject.put("email", dbObject.getValue("email"));
-						    tokenObject.put("username", dbObject.getValue("username"));
-						    tokenObject.put("active", dbObject.getValue("active"));
-						    tokenObject.put("authlevel", dbObject.getValue("authlevel"));
-						    		
-						    String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
-						    LOGGER.info("JWT TOKEN: " + token);
-						        	
-						    response
-					        .putHeader("content-type", "application/json")
-					        .end("{\"result\":\"ok\", \"jwt\": \""+token+"\"}");
-					    }
-						     
-						    
-				    }).onFailure(err -> 
-				    {
-				   		LOGGER.info("Unable to get connect: " + err + ", at IP:" + routingContext.request().remoteAddress());
-				   		response
-				             .putHeader("content-type", "application/json")
-				             .end("{\"result\":\"Fail\", \"reason\": \""+err.toString()+"\"}"); 
-				      		//routingContext.fail(500);
-				    });
-				    */
+				   
+				    LOGGER.info("Setting user session for username: " + loginPayloadJSON.getValue("username"));
+				    LOGGER.info("salty password: " + map.get("password"));
+				   
+				    /*****************************************************************************/
+				    Context context = routingContext.vertx().getOrCreateContext();
+					Pool pool = context.get("pool");
+					
+					if (pool == null)
+					{
+						LOGGER.debug("pull is null - restarting");
+						DatabaseController DB = new DatabaseController(routingContext.vertx());
+						LOGGER.debug("Taking the refreshed context pool object");
+						pool = context.get("pool");
+					}
+					response
+			        .putHeader("content-type", "application/json");
+					
+					pool.getConnection(ar -> {
+			            if (ar.succeeded()) {
+			                SqlConnection connection = ar.result();
+			                
+			                JsonArray ja = new JsonArray();
+			                
+			                // Execute a SELECT query
+			                connection.preparedQuery("select * FROM function_login($1,$2)")
+	                        .execute(Tuple.of(map.get("username"), map.get("password")), 
+	                        		res -> {
+	                        			if (res.succeeded()) 
+			                            {
+			                                // Process the query result
+			                            	
+			                                RowSet<Row> rows = res.result();
+			                                
+			                                rows.forEach(row -> 
+			                                {
+			                                	JsonObject jo = new JsonObject(row.toJson().encode());
+			                                	ja.add(jo);
+			                                	LOGGER.debug("Found user: " + ja.encodePrettily());
+			                                });
+			                                
+			                                LOGGER.debug("Result size: " + ja.size());
+			                                
+			                                if(ja.size() > 0)
+			                                {
+			                                	LOGGER.debug("Found user: " + ja.encodePrettily());
+			                                	
+			                                	JsonObject dbObject = ja.getJsonObject(0);
+			                                	
+			                                	JWTAuth jwt;
+			        						    // Set up the authentication tokens 
+			        						    String name = "JWT";
+			        						    
+			        						    AuthUtils AU = new AuthUtils();
+			        						    jwt = AU.createJWTToken(context);
+			        						        	
+			        						    JsonObject tokenObject = new JsonObject();
+			        						        	
+			        						    tokenObject.put("id", dbObject.getValue("id"));
+			        						    tokenObject.put("firstname", dbObject.getValue("firstname"));
+			        						    tokenObject.put("surname", dbObject.getValue("surname"));
+			        						    tokenObject.put("email", dbObject.getValue("email"));
+			        						    tokenObject.put("username", dbObject.getValue("username"));
+			        						    tokenObject.put("active", dbObject.getValue("active"));
+			        						    tokenObject.put("authlevel", dbObject.getValue("authlevel"));
+			        						    		
+			        						    String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
+			        						    LOGGER.info("JWT TOKEN: " + token);
+			        						        	
+			        						    response
+			        					        .putHeader("content-type", "application/json")
+			        					        .end("{\"result\":\"ok\", \"jwt\": \""+token+"\"}");
+			                                	
+			                                	
+			                                }
+			                                else
+			                                {
+			                                	 response
+			     						        .putHeader("content-type", "application/json")
+			     						        .end("{\"result\":\"fail\", \"jwt\": \"Invalid credentials\"}");
+			                                }
+			                            } 
+			                            else 
+			                            {
+			                                // Handle query failure
+			                            	LOGGER.error("error: " + res.cause() );
+			                            	response
+			     						    .putHeader("content-type", "application/json")
+			     						    .end("{\"result\":\"fail\", \"jwt\": \"Invalid credentials\"}");
+			                                //res.cause().printStackTrace();
+			                            }
+			                            // Close the connection
+			                            //response.end();
+			                            connection.close();
+			                        });
+			            } else {
+			                // Handle connection failure
+			                ar.cause().printStackTrace();
+			                response
+ 						    .putHeader("content-type", "application/json")
+ 						    .end("{\"result\":\"fail\", \"jwt\": \"Invalid credentials\"}");
+			            }
+			            
+			        });
+				   
 				}
 		}
 		catch(Exception e)
 		{
 		  		LOGGER.info("ERROR: " + e.toString());
+		  		response
+				    .putHeader("content-type", "application/json")
+				    .end("{\"result\":\"fail\", \"jwt\": \"Invalid credentials\"}");
 		}
 	}
 	/****************************************************************/
@@ -563,7 +599,10 @@ public class SetupPostHandlers
 				map.put("username", payload.getValue("username"));
 				LOGGER.info("Accessible Level is : " + authlevel);
 		        		
-		        /*DST.validateUserStatus
+		        /*
+		         * select username, active from tb_user where username = #{username};
+		         * 
+		         * DST.validateUserStatus
 		        .execute(map)
 		    	.onSuccess(result -> 
 		    	{
@@ -681,6 +720,7 @@ public class SetupPostHandlers
 		String encodedString = Base64.getEncoder().encodeToString(originalInput.getBytes());
 		return encodedString;
 	}
+	/*********************************************************************************/
 	public String base64UrlDecoder(String encodedString)
 	{
 		byte[] decodedBytes = Base64.getDecoder().decode(encodedString);
@@ -692,7 +732,11 @@ public class SetupPostHandlers
 	{
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 	}
-	
+	/*********************************************************************************/
+	private static String decode(String encodedString) {
+	    return new String(Base64.getUrlDecoder().decode(encodedString));
+	}
+	/*********************************************************************************/
 	private String hmacSha256(String data, String secret) {
 	    try {
 

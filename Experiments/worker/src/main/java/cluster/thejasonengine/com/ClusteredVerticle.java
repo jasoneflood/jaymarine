@@ -234,9 +234,20 @@ public class ClusteredVerticle extends AbstractVerticle {
     public void setRoutes(Router router)
     {
     	
-    	router.post("/login").handler(BodyHandler.create()).handler(this::handleLogin);
-    	router.get("/handler/simpleTest").handler(setupPostHandlers.simpleTest);
-    	router.get("/handler/simpleDBTest").handler(setupPostHandlers.simpleDBTest);
+      /*********************************************************************************/
+  	  /*This will log a user in {"result":"ok", "reason": "ok"}     				   */
+  	  /*********************************************************************************/
+  	  router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
+  	  router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
+  	  router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
+  	  router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
+    	
+    	
+    	
+    	
+    	router.get("/api/simpleTest").handler(setupPostHandlers.simpleTest);
+    	router.get("/api/simpleDBTest").handler(setupPostHandlers.simpleDBTest);
+    	
     	
     	//router.get("/api/setupSystemDatabase").handler(setupPostHandlers.setupSystemDatabase); 
     	
