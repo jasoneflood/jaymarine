@@ -1,5 +1,8 @@
 package cluster.thejasonengine.com;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,10 +58,7 @@ public class ClusteredVerticle extends AbstractVerticle {
 		LOGGER.debug("This is a ClusteredVerticle 'DEBUG' TEST MESSAGE");
 		LOGGER.warn("This is a ClusteredVerticle 'WARN' TEST MESSAGE");
 		LOGGER.error("This is an ClusteredVerticle 'ERROR' TEST MESSAGE");
-		
-		
-		
-		
+				
 		EventBus eventBus = vertx.eventBus();
 		LOGGER.debug("Started the ClusteredVerticle Event Bus");
 		/*Created a vertx context*/
@@ -74,37 +74,32 @@ public class ClusteredVerticle extends AbstractVerticle {
 		
 		setupPostHandlers = new SetupPostHandlers(vertx);
 		LOGGER.info("Set Handlers Setup");
-		
-		
+				
 		
 		Router router = Router.router(vertx);
 		
 		
 		LOGGER.debug("Setup the post handler");
-		
-		
+			
 		
 		/*Create and add a session to the system*/
 		setupSession = new SetupSession(context.owner());
 		router.route().handler(setupSession.sessionHandler);
 		
-		
-		
-		
-		
-		
 		/*
 		Read.readFile(vertx, "mysettings.json");
 		LOGGER.debug("Read the ClusteredVerticle mysettings.json");
 		*/
-		setRoutes(router);
 		
 		
-		FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
+		 
+        /*********************************************************************************/
+        FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
 		TemplateHandler templateHandler = TemplateHandler.create((TemplateEngine) engine);
 		/*Set Template*/
-		router.get("/dynamic/*").handler(templateHandler);
 		
+		//router.get("/dynamic/*").handler(templateHandler);
+		/*********************************************************************************/
 		router.getWithRegex(".+\\.ftl")
 		 .handler(ctx -> 
 				 {
@@ -164,7 +159,8 @@ public class ClusteredVerticle extends AbstractVerticle {
 					   				 {
 					   		             if (res.succeeded()) 
 					   		             {
-					   		                 ctx.response().end(res.result());
+					   		            	 LOGGER.info("Successfully rendered template: " + file2send.substring(1));
+					   		            	 ctx.response().end(res.result());
 					   		             } 
 					   		             else 
 					   		             {
@@ -177,7 +173,7 @@ public class ClusteredVerticle extends AbstractVerticle {
 			    				{
 			    					LOGGER.error("**Potential security violation* The JWT from the cookie did not pass basic testing: " + ctx.normalizedPath() + ", From IP:" + ctx.request().remoteAddress());
 					    			LOGGER.info("Redirecting to: " + ctx.normalizedPath().substring(0,ctx.normalizedPath().indexOf("/")).concat("index.htm"));
-					    			ctx.redirect("../index.htm");
+					    			ctx.redirect("../index.html");
 			    				}
 			    				
 			    			}
@@ -187,33 +183,113 @@ public class ClusteredVerticle extends AbstractVerticle {
 			    			LOGGER.error("Did not find a cookie name JWT when calling the (.+\\\\.ftl) webpage: " + ctx.normalizedPath());
 			    			LOGGER.info("Redirecting to: " + ctx.normalizedPath().substring(0,ctx.normalizedPath().indexOf("/")).concat("index.htm"));
 			    			
-			    			ctx.redirect("../index.htm");
+			    			ctx.redirect("../index.html");
 			    			//ctx.response().sendFile("webroot/index.htm"); //drop starting slash
 			    		}
-					 
-					 
-					 
 				 });
+        
+		/***************************************************************************************/
+    	/*
+    	 * This simply creates a cookie JWT token
+    	 */
+		/***************************************************************************************/
+    	router.get("/api/newToken").handler(
+    		    ctx -> 
+    		    	{
+    		    		
+    		    		String name = "JWT";
+    		    		ctx.response().putHeader("Content-Type", "application/json");
+    		    		JsonObject tokenObject = new JsonObject();
+    		    		tokenObject.put("endpoint", "sensor1");
+    		    		tokenObject.put("someKey", "someValue");
+    		    		String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
+    		    		LOGGER.info("JWT TOKEN: " + token);
+    		    		
+    		    		LOGGER.debug("Creating cookie");
+    		    		AU.createCookie(ctx, 600, name, token, "/");
+    		    		LOGGER.debug("Cookie created");
+    		    		
+    	   	         	ctx.response().setChunked(true);
+    	   	         	ctx.response().putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+    	   	         	ctx.response().putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET");
+    	   	         	//ctx.response().write("Cookie Stamped -> " + name + " : " +token);
+    	   	         	
+    	   	         	JsonObject response = new JsonObject();
+    	   	         	response.put("token", token);
+    	   	         	LOGGER.info("Successfully generated token and added cookie " + token);
+    		    		ctx.response().end(response.toString());
+    		    		
+    		    	}
+    		    );
+    	/***************************************************************************************/
+    	/*
+    	 * This is really flawed - it simply checks for the actual presence of a cookie.
+    	 * The verify cookie just looks at the user field in the payload
+    	 */
+    	/***************************************************************************************/
+    	router.get("/api/protected").handler(
+    		    ctx -> 
+    		    	{
+    		    		ctx.response().putHeader("Content-Type", "application/json");
+    		    		Cookie cookie = (Cookie) ctx.getCookie("JWT");
+    		    		if (cookie != null) 
+    		    		{
+    		    			LOGGER.info("Found a cookie with the correct name");
+    		    			if(verifyCookie(cookie))
+    		    			{
+    		    				ctx.response().end("OK");
+    		    			}
+    		    		}
+    		    		else if (cookie == null) 
+    		    		{
+    		    			LOGGER.error("Did not find a cookie name JWT when calling the (api/protected) webpage: " + ctx.normalizedPath());
+    		    			ctx.response().sendFile("webroot/index.htm"); //drop starting slash
+    		    		}
+    		      });
+    	/***************************************************************************************/
+    	/*
+    	 * This "secures" the route to particular assets by looking for the presence of a cookie
+    	 */
+    	/***************************************************************************************/
+    	router.route("/loggedin/*").handler(
+    		    ctx -> 
+    		    	{
+    		    		LOGGER.info("verifying access to the logged in file");
+    		    		Cookie cookie = (Cookie) ctx.getCookie("JWT");
+    		    		if (cookie != null) 
+    		    		{
+    		    			LOGGER.info("Found a cookie with the correct name");
+    		    			if(verifyCookie(cookie))
+    		    			{
+    		    				LOGGER.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> : "+ctx.normalizedPath());
+    		    				String file2send = ctx.normalizedPath();
+    		    				LOGGER.info("Session: " + setupSession.getTokenFromSession(ctx, "username"));
+    		    				ctx.response().sendFile("webroot/"+file2send.substring(1)); //drop starting slash
+    		    			}
+    		    		}
+    		    		else if (cookie == null) 
+    		    		{
+    		    			LOGGER.error("Did not find a cookie name JWT when calling the (loggedin/*) webpage: " + ctx.normalizedPath());
+    		    			//ctx.response().end("NO JWT TOKEN");
+    		    			ctx.response().sendFile("webroot/index.htm"); //drop starting slash
+    		    		}
+    		    	}).failureHandler(frc-> 
+    		    	{
+    		  		  	//frc.response().setStatusCode( 400 ).end("Sorry! Not today");
+    		    		frc.redirect("../index.htm");
+    		    		
+    		    	});;
+        
+        
+        
+		setRoutes(router);
+		
+		
+		
 		
 		
 		LOGGER.debug("Started the ClusteredVerticle Router");
 		
-		
-		
-		//createSystemDatabase(vertx);
-		
-		
-		
-		
-
-		/*
-		JDBCClient client = database.thejasonengine.com.DatabaseController.createSystemDatabase(vertx);
-		database.thejasonengine.com.DatabaseGetterTemplates DGT = new database.thejasonengine.com.DatabaseGetterTemplates(client);
-		database.thejasonengine.com.DatabaseSetterTemplates DST = new database.thejasonengine.com.DatabaseSetterTemplates(client);
-		
-		setupPostHandlers = new SetupPostHandlers(vertx, DST);
-		LOGGER.info("Set Handlers Setup");
-		*/
 		
 		
 		vertx.createHttpServer()
@@ -234,39 +310,28 @@ public class ClusteredVerticle extends AbstractVerticle {
     public void setRoutes(Router router)
     {
     	
-      /*********************************************************************************/
-  	  /*This will log a user in {"result":"ok", "reason": "ok"}     				   */
-  	  /*********************************************************************************/
-  	  router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
-  	  router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
-  	  router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
-  	  router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
+    	
+    	 /*********************************************************************************/
+	  	 /*This sets up a static HTML route			   */
+	  	 /*********************************************************************************/
+    	 router.route("/*").handler(StaticHandler.create().setCachingEnabled(false).setWebRoot("webroot"));   
+    	
+	     /*********************************************************************************/
+	  	 /*This will log a user in {"result":"ok", "reason": "ok"}     				   */
+	  	 /*********************************************************************************/
+	  	 router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
+	  	 router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
+	  	 router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
+	  	 router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
+	  	/***************************************************************************************/
     	
     	
-    	
-    	
+  	  	/***************************************************************************************/
     	router.get("/api/simpleTest").handler(setupPostHandlers.simpleTest);
     	router.get("/api/simpleDBTest").handler(setupPostHandlers.simpleDBTest);
     	
     	
-    	//router.get("/api/setupSystemDatabase").handler(setupPostHandlers.setupSystemDatabase); 
-    	
-    	router.get("/get").handler(ctx -> {
-            // Respond with a simple JSON object
-            ctx.response()
-                .putHeader("content-type", "application/json")
-                .end("{\"message\":\"Hello get request!\"}");
-        });
-    	 
-    	
-    	//router.get("/simpleTest").handler(setupPostHandlers.simpleTest);
-    	
-    	router.post("/post").handler(ctx -> {
-    		// Respond with a simple JSON object
-            ctx.response()
-                .putHeader("content-type", "application/json")
-                .end("{\"message\":\"Hello post request!\"}");
-        });
+    	/***************************************************************************************/
     	// Define the WebSocket route
         router.get("/websocket").handler(ctx -> {
             // Upgrade the HTTP request to a WebSocket
@@ -302,125 +367,28 @@ public class ClusteredVerticle extends AbstractVerticle {
             });
         });
         
-    
-        /*router.get("/metrics").handler(ctx -> {
-    		// Respond with a simple JSON object
-            ctx.response()
-                    .putHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-                    .end(prometheusRegistry.scrape());
-        });*/
-        
-        router.route().handler(StaticHandler.create("src/main/resources/user")
-                .setCachingEnabled(false)  // Optional: Disable caching for development purposes
-                .setDirectoryListing(true));  // Optional: Allow directory listing
-
-	    /*********************************************************************************/
-	  	/*This will log a user in {"result":"ok", "reason": "ok"}     				   */
-        /*********************************************************************************/
-	    
        
-        //router.post("/api/validateCredentials").handler(BodyHandler.create()).handler(setupPostHandlers.validateCredentials);
         
-        /*
-        router.post("/api/validateUserStatus").handler(BodyHandler.create()).handler(setupPostHandlers.validateUserStatus);
-	  	router.post("/api/createCookie").handler(BodyHandler.create()).handler(setupPostHandlers.createCookie);
-	  	router.post("/api/createSession").handler(BodyHandler.create()).handler(setupPostHandlers.createSession);
-	  	*/  
-	  	  
-	  	//  router.post("/web/login").handler(BodyHandler.create()).handler(setupPostHandlers.webLogin);
-        /******************************************************************************/
-    	/*
-    	 * This simply creates a cookie JWT token
-    	 */
-    	router.get("/api/newToken").handler(
-    		    ctx -> 
-    		    	{
-    		    		
-    		    		String name = "JWT";
-    		    		ctx.response().putHeader("Content-Type", "application/json");
-    		    		JsonObject tokenObject = new JsonObject();
-    		    		tokenObject.put("endpoint", "sensor1");
-    		    		tokenObject.put("someKey", "someValue");
-    		    		String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
-    		    		LOGGER.info("JWT TOKEN: " + token);
-    		    		
-    		    		LOGGER.debug("Creating cookie");
-    		    		AU.createCookie(ctx, 600, name, token, "/");
-    		    		LOGGER.debug("Cookie created");
-    		    		
-    	   	         	ctx.response().setChunked(true);
-    	   	         	ctx.response().putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-    	   	         	ctx.response().putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET");
-    	   	         	//ctx.response().write("Cookie Stamped -> " + name + " : " +token);
-    	   	         	
-    	   	         	JsonObject response = new JsonObject();
-    	   	         	response.put("token", token);
-    	   	         	LOGGER.info("Successfully generated token and added cookie " + token);
-    		    		ctx.response().end(response.toString());
-    		    		
-    		    	}
-    		    );
-    	/***************************************************************************************/
-    	/*
-    	 * This is really flawed - it simply checks for the actual presence of a cookie.
-    	 * The verify cookie just looks at the user field in the payload
-    	 */
-    	router.get("/api/protected").handler(
-    		    ctx -> 
-    		    	{
-    		    		ctx.response().putHeader("Content-Type", "application/json");
-    		    		Cookie cookie = (Cookie) ctx.getCookie("JWT");
-    		    		if (cookie != null) 
-    		    		{
-    		    			LOGGER.info("Found a cookie with the correct name");
-    		    			if(verifyCookie(cookie))
-    		    			{
-    		    				ctx.response().end("OK");
-    		    			}
-    		    		}
-    		    		else if (cookie == null) 
-    		    		{
-    		    			LOGGER.error("Did not find a cookie name JWT when calling the (api/protected) webpage: " + ctx.normalizedPath());
-    		    			ctx.response().sendFile("webroot/index.htm"); //drop starting slash
-    		    		}
-    		      });
-    	/***************************************************************************************/
-    	/*
-    	 * This "secures" the route to particular assets by looking for the presence of a cookie
-    	 */
-    	router.route("/loggedin/*").handler(
-    		    ctx -> 
-    		    	{
-    		    		LOGGER.info("verifying access to the logged in file");
-    		    		Cookie cookie = (Cookie) ctx.getCookie("JWT");
-    		    		if (cookie != null) 
-    		    		{
-    		    			LOGGER.info("Found a cookie with the correct name");
-    		    			if(verifyCookie(cookie))
-    		    			{
-    		    				LOGGER.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> : "+ctx.normalizedPath());
-    		    				String file2send = ctx.normalizedPath();
-    		    				LOGGER.info("Session: " + setupSession.getTokenFromSession(ctx, "username"));
-    		    				ctx.response().sendFile("webroot/"+file2send.substring(1)); //drop starting slash
-    		    			}
-    		    		}
-    		    		else if (cookie == null) 
-    		    		{
-    		    			LOGGER.error("Did not find a cookie name JWT when calling the (loggedin/*) webpage: " + ctx.normalizedPath());
-    		    			//ctx.response().end("NO JWT TOKEN");
-    		    			ctx.response().sendFile("webroot/index.htm"); //drop starting slash
-    		    		}
-    		    	}).failureHandler(frc-> 
-    		    	{
-    		  		  	//frc.response().setStatusCode( 400 ).end("Sorry! Not today");
-    		    		frc.redirect("../index.htm");
-    		    		
-    		    	});;
-        
-        
-        
-        
-        router.route().handler(BodyHandler.create());
+		
+    	/*********************************************************************************/
+    	/* This will be the routes for the website activity
+    	/**********************************************************************************/
+    	/* In this route we stack the individual fuctions of login to carry out the login */
+    	 router.post("/web/login").handler(BodyHandler.create()).handler(setupPostHandlers.webLogin);
+    	/***************************************************************************************/	    	
+    	router.get("/get").handler(ctx -> {
+    		            // Respond with a simple JSON object
+    		            ctx.response()
+    		                .putHeader("content-type", "application/json")
+    		                .end("{\"message\":\"Hello get request!\"}");
+    		        });
+    	/***************************************************************************************/	    	 
+    	router.post("/post").handler(ctx -> {
+    		    		// Respond with a simple JSON object
+    		            ctx.response()
+    		                .putHeader("content-type", "application/json")
+    		                .end("{\"message\":\"Hello post request!\"}");
+    		        });
     }
     /*****************************************************************************/
  // Handle the login logic

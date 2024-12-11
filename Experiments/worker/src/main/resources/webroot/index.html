@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<title>Cyber Assessment Framework</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/css/w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+body,h1 {font-family: "Raleway", sans-serif}
+body, html {height: 100%}
+.bgimg {
+  background-image: url('assets/images/background.png');
+  min-height: 100%;
+  background-position: center;
+  background-size: cover;
+}
+</style>
+
+<style>
+body {font-family: Arial, Helvetica, sans-serif;}
+
+/* Full-width input fields */
+input[type=text], input[type=password] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Set a style for all buttons */
+button {
+  background-color: #04AA6D;
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+/* Extra styles for the cancel button */
+.cancelbtn {
+  width: auto;
+  padding: 10px 18px;
+  background-color: #f44336;
+}
+
+/* Center the image and position the close button */
+.imgcontainer {
+  text-align: center;
+  margin: 24px 0 12px 0;
+  position: relative;
+}
+
+img.avatar {
+  width: 40%;
+  border-radius: 50%;
+}
+
+.container {
+  padding: 16px;
+}
+
+.EnterButtons
+{
+ float: right;
+}
+
+.button {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgb(254,126,0);
+  padding: 15px 40px;
+  border-radius: 4px;
+  font-weight: normal;
+  text-transform: uppercase;
+  transition: all 0.2s ease-in-out;
+}
+
+.glow-button:hover {
+  color: rgba(255,255,1, 1);
+  box-shadow: 0 5px 15px rgba(255,255,1, .4);
+}
+
+.buttonLogin {
+  text-decoration: none;
+  color: rgba(0,0,0, 0.8);
+  background: rgb(1,255,255);
+  padding: 15px 40px;
+  border-radius: 4px;
+  font-weight: normal;
+  text-transform: uppercase;
+  transition: all 0.2s ease-in-out;
+}
+
+.glow-button-login:hover {
+  color: rgba(254,126,0, 1);
+  box-shadow: 0 5px 15px rgba(1,255,255, .4);
+}
+
+span.psw {
+  float: right;
+  padding-top: 16px;
+}
+
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  padding-top: 150px;
+}
+
+/* Modal Content/Box */
+.modal-content {
+  background-color:rgb(0,128,255,0.4);
+  margin: 0% auto 0% auto; /* 5% from the top, 15% from the bottom and centered */
+  border: 1px solid #00C0FF;
+  width: 45%; /* Could be more or less, depending on screen size */
+}
+
+/* The Close Button (x) */
+.close {
+  position: absolute;
+  right: 25px;
+  top: 0;
+  color: #000;
+  font-size: 35px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: red;
+  cursor: pointer;
+}
+
+/* Add Zoom Animation */
+.animate {
+  -webkit-animation: animatezoom 0.6s;
+  animation: animatezoom 0.6s
+}
+
+@-webkit-keyframes animatezoom {
+  from {-webkit-transform: scale(0)} 
+  to {-webkit-transform: scale(1)}
+}
+  
+@keyframes animatezoom {
+  from {transform: scale(0)} 
+  to {transform: scale(1)}
+}
+
+/* Change styles for span and cancel button on extra small screens */
+@media screen and (max-width: 300px) {
+  span.psw {
+     display: block;
+     float: none;
+  }
+  .cancelbtn {
+     width: 100%;
+  }
+}
+</style>
+
+
+
+<body>
+
+<div class="bgimg w3-display-container w3-animate-opacity w3-text-white">
+  <div class="w3-display-topleft w3-padding-large w3-xlarge">
+    CAF
+  </div>
+    <div class="EnterButtons">
+    	<button class="button glow-button" onclick="document.getElementById('id01').style.display='block'" style="width:auto;">Login</button>
+    	<button class="button glow-button" onclick="document.getElementById('id02').style.display='block'" style="width:auto;">Register</button>
+    </div>
+    
+  
+  <div id="id01" class="modal">
+  
+  <div class="modal-content animate">
+    <div class="imgcontainer" >
+      <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close Modal">&times;</span>
+      <img src="assets/images/icons/hacker.jpg" alt="Avatar" class="avatar" width="180" height="150" style="background-color:rgb(0,128,255,0.4)">
+    </div>
+
+    <div class="container">
+	    
+	      <label for="uname"><b>Username</b></label>
+	      <input type="text" placeholder="Enter Username" name="username" id="username" required>
+	
+	      <label for="psw"><b>Password</b></label>
+	      <input type="password" placeholder="Enter Password" name="password" id="password" required>
+	        
+	      <button class="buttonLogin glow-button-login" onclick="login(document.getElementById('username').value,document.getElementById('password').value)">Login</button>
+	      <label>
+	        <input type="checkbox" checked="checked" name="remember"> Remember me
+	      </label>
+      
+    </div>
+
+    <div class="container" style="background-color:rgb(0,128,255,0.4)">
+      <button type="button"  onclick="document.getElementById('id01').style.display='none'" class="cancelbtn">Cancel</button>
+      <span class="psw">
+      
+       <!--  <a href="#">Forgot password</a>  -->
+      
+      </span>
+    </div>
+  </div>
+</div>
+
+
+<div id="id02" class="modal">
+  
+  <div class="modal-content animate">
+    <div class="imgcontainer" >
+      <span onclick="document.getElementById('id02').style.display='none'" class="close" title="Close Modal">&times;</span>
+      <img src="assets/images/icons/hacker.jpg" alt="Avatar" class="avatar" width="180" height="150" style="background-color:rgb(0,128,255,0.4)">
+    </div>
+
+    <div class="container">
+	    
+	      <label for="uname"><b>Username</b></label>
+	      <input type="text" placeholder="Enter Username" name="reg_username" id="reg_username" required>
+	
+	      <label for="psw"><b>Password</b></label>
+	      <input type="password" placeholder="Enter Password" name="reg_password" id="reg_password" required>
+	      
+	      <label for="psw"><b>Confirm Password</b></label>
+	      <input type="password" placeholder="Enter Password" name="reg_passwordMatchCheck" id="reg_passwordMatchCheck" required>
+	      
+	      <label for="cls"><b>Class</b></label>
+	      <select name="dropdown" id="dropdown"></select>
+	      
+	      <button class="buttonLogin glow-button-login" onclick="Register(document.getElementById('reg_username').value, document.getElementById('reg_password').value, document.getElementById('reg_passwordMatchCheck').value, document.getElementById('dropdown').value)">Register</button>
+	</div>
+
+    <div class="container" style="background-color:rgb(0,128,255,0.4)">
+      <button type="button"  onclick="document.getElementById('id02').style.display='none'" class="cancelbtn">Cancel</button>
+      <span class="regResult" id="regResult">
+      
+       <!--  <a href="#">Forgot password</a>  -->
+      
+      </span>
+    </div>
+  </div>
+</div>
+
+
+
+
+<script>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      	
+// Get the modal
+var modal = document.getElementById('id01');
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+/***************************************************************/
+
+/***************************************************************/
+ function getAllClasses()
+{
+  
+  $.ajax({
+		    url: '/api/getAllClasses',
+		    type: 'GET',
+		    contentType: 'application/json',
+		    data: "{}",
+        	success: function (data) {
+		    	console.log(data);
+		    	var s = '<option value="-1">Please Select a Class</option>';
+		    	for (var i = 0; i < data.length; i++) {  
+	                   s += '<option value="' + data[i].short_name + '">' + data[i].short_name + '</option>';  
+	               }  
+	               $("#dropdown").html(s);  
+		    	
+		    }
+		});
+		
+} 
+ /*************************************************************/
+
+
+/*************************************************************/
+function Register(var_username, var_password, var_password_match, var_class)
+{
+	$.ajax({
+        type: "POST",
+        url: "/api/registerUser",
+        contentType: 'application/json;charset=UTF-8',
+        data: JSON.stringify({'username': var_username, 'password': var_password, 'passwordMatchCheck': var_password_match,'class': var_class}),
+        success: function (data) 
+        {
+            console.log(data);
+            if(data.result == "ok")
+            {
+            	 $('#regResult').html("Registration Successful"); 	
+            }
+            else
+            {
+            	 $('#regResult').html("Registration Incomplete"); 	
+            }
+           
+        }
+        
+ 	});
+}	
+/*************************************************************/
+function login(var_username, var_password)
+{
+	$.ajax({
+        type: "POST",
+        url: "/web/login",
+        contentType: 'application/json;charset=UTF-8',
+        data: JSON.stringify({'username': var_username, 'password': var_password}),
+        success: function (data) 
+        {
+            console.log(data);
+            if (data.redirect) 
+            {
+            	console.log("here: " + data.redirect);
+            	window.location.href = "loggedin/dashboard.ftl";
+            }
+            else 
+            {
+            	console.log("there: " + data.redirect);
+            	window.location.href = "loggedin/dashboard.ftl";
+            }
+        }
+        
+ 	});
+}	
+
+getAllClasses();
+</script>
+  
+  
+  <div class="w3-display-bottomleft w3-padding-large">
+    Powered by <a href="http://www.honeyn3t.com" target="_blank">The Irish Honeyn3t Project</a>
+  </div>
+</div>
+
+</body>
+</html>

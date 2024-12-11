@@ -26,6 +26,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
@@ -33,6 +34,8 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
+import io.vertx.core.http.HttpHeaders;
+
 import session.thejasonengine.com.SetupSession;
 
 public class SetupPostHandlers 
@@ -46,6 +49,7 @@ public class SetupPostHandlers
 	public Handler<RoutingContext> createCookie;
 	public Handler<RoutingContext> createSession;
 	public Handler<RoutingContext> validateUserStatus;
+	public Handler<RoutingContext> webLogin;
 		
 	public SetupPostHandlers(Vertx vertx)
     {
@@ -56,9 +60,7 @@ public class SetupPostHandlers
 		createCookie = SetupPostHandlers.this::handleCreateCookie;
 		createSession = SetupPostHandlers.this::handleCreateSession;
 		validateUserStatus =  SetupPostHandlers.this::handleValidateUserStatus;
-		
-		
-		//webLogin = SetupPostHandlers.this::handleWebLogin;
+		webLogin = SetupPostHandlers.this::handleWebLogin;
 		
 		//DST = v_DST;
 		
@@ -461,110 +463,138 @@ public class SetupPostHandlers
 				    	map.put("username", loginPayloadJSON.getValue("username"));
 				    	map.put("password", hashAndSaltPass(loginPayloadJSON.getValue("password").toString()));
 				    	
-			    		/*
-			    		DST.login
-					    	.execute(map)
-					        .onSuccess(result -> 
-					        {
-					        	
-					        	 Object obj = null; //We will use this to Create a JSON object of all the data we will use to drive a session.
-					        	 Iterator itor = result.iterator(); 
-					        	 int resultSet = 0;
-					        	 while(itor.hasNext())                  // checks if there is an element to be visited.
-					        	 {
-					        		  obj = itor.next(); //There should only be one.
-					        		  resultSet = resultSet+1;
-					        		  LOGGER.debug("Recieved: " + obj);
-					        	 }
-					        	if(resultSet == 0)
-					        	{
-					        		LOGGER.error("*Potential security violation* Signin error for username: " + map.get("username") + ", at IP:" + routingContext.request().remoteAddress());
-					        		response.sendFile("index.html");
-					        	}
-					        	else
-					        	{
-					        		JsonObject dbObject = new JsonObject(obj.toString());
-						        	
-							        LOGGER.info("Successfully ran query: webLogin");
-						        	
-						        	// Now we rediscover the context 
-						        	Vertx vertx = routingContext.vertx();					        	
-						        	Context context = vertx.getOrCreateContext();
-						        	
-						        	FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
-					    	    	 
-						        	JWTAuth jwt;
-						        	// Set up the authentication tokens 
-						        	String name = "JWT";
-						        	AuthenticationUtils AU = new AuthenticationUtils();
-						        	jwt = AU.createJWTToken(context);
-						        	
-						        	JsonObject tokenObject = new JsonObject();
-						        	
-						        	// We would need to tweak these values to determine the authorization rights for the user
-						        	
-						    		tokenObject.put("username", dbObject.getValue("username"));
-						    		tokenObject.put("authlevel", dbObject.getValue("authlevel"));
-						    		
-						    		String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
-						    		LOGGER.info("JWT TOKEN CREATED AT WEB LOGIN: " + token + ", From IP:" + routingContext.request().remoteAddress());
-	
-						    		tokenObject.put("jwt", token);
-						        	
-						    		//Not going to use session variables
-						    		
-						    		//SetupSession setupSession = new SetupSession(vertx);
-						        	//LOGGER.info("created the session object");
-						        	//setupSession.putTokenInSession(routingContext, "token", token);
-						        	//setupSession.putTokenInSession(routingContext, "tokenObject", tokenObject.toString());
-						    		
-						    		// Now we add the cookie values to the system such that they can be used for future manipulation
-						    		AuthenticationUtils au = new AuthenticationUtils();
-						    		
-						    		Cookie cookie  = au.createCookie(routingContext, 600, name, token, "/");
-						    		
-						    		
-						    		
-						    		
-						    		response.addCookie(cookie);
-						    		response.setChunked(true);
-						    		response.putHeader("Authorization", dbObject.getValue("authlevel").toString());
-						    		response.putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-						    		//response.putHeader("content-type", "application/json");
-						    		response.putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET");
-						    		//response.send("{\"redirect\":\"loggedin\\dashboard.ftl\"}");
-						    		
-						    		
-						    		engine.render(tokenObject, "templates/loggedin/dashboard.ftl", 
-							   			     res -> 
-							   				 {
-							   		             if (res.succeeded()) 
-							   		             {
-							   		            	routingContext.response().end(res.result());
-							   		             } 
-							   		             else 
-							   		             {
-							   		            	routingContext.fail(res.cause());
-							   		             }
-							   				 });
-						         }
-					        }
-					        ).onFailure(err -> 
-					      	{
-					      		LOGGER.info("Unable to run database query webLogin: " + err);
-					      		response
-					              .putHeader("content-type", "application/json")
-					              .end("{\"result\":\"Fail\", \"reason\": \""+err.toString()+"\"}"); 
-					      		//routingContext.fail(500);
-					      	}
-					        );*/
-			    		}
-			    		
+				    	
+				    	/*****************************************************************************/
+					    Context context = routingContext.vertx().getOrCreateContext();
+						Pool pool = context.get("pool");
+						
+						if (pool == null)
+						{
+							LOGGER.debug("pull is null - restarting");
+							DatabaseController DB = new DatabaseController(routingContext.vertx());
+							LOGGER.debug("Taking the refreshed context pool object");
+							pool = context.get("pool");
+						}
+						
+						pool.getConnection(ar -> 
+						{
+				            if (ar.succeeded()) 
+				            {
+				                SqlConnection connection = ar.result();
+				                JsonArray ja = new JsonArray();
+				                
+				                // Execute a SELECT query
+				                connection.preparedQuery("select * FROM function_login($1,$2)")
+		                        .execute(Tuple.of(map.get("username"), map.get("password")), 
+		                        	res -> 
+		                        		{
+		                        			if (res.succeeded()) 
+				                            {
+				                                // Process the query result
+				                            	
+				                                RowSet<Row> rows = res.result();
+				                                
+				                                rows.forEach(row -> 
+				                                {
+				                                	JsonObject jo = new JsonObject(row.toJson().encode());
+				                                	ja.add(jo);
+				                                	LOGGER.debug("Found user: " + ja.encodePrettily());
+				                                });
+				                                
+				                                LOGGER.debug("Result size: " + ja.size());
+				                                
+				                                if(ja.size() > 0)
+				                                {
+				                                	LOGGER.debug("Found user: " + ja.encodePrettily());
+				                                	JsonObject dbObject = ja.getJsonObject(0);
+				                                	
+				                                	
+				                                	LOGGER.info("Successfully ran query: webLogin");
+										        	 
+
+										        	Vertx vertx = routingContext.vertx();					        	
+										        	FreeMarkerTemplateEngine engine = FreeMarkerTemplateEngine.create(vertx);
+				                                	
+				                                	
+										        	JWTAuth jwt;
+										        	// Set up the authentication tokens 
+										        	String name = "JWT";
+										        	AuthUtils AU = new AuthUtils();
+										        	jwt = AU.createJWTToken(context);
+										        	
+										        	JsonObject tokenObject = new JsonObject();
+										        	
+										        	// We would need to tweak these values to determine the authorization rights for the user
+										        	
+										    		tokenObject.put("username", dbObject.getValue("username"));
+										    		tokenObject.put("authlevel", dbObject.getValue("authlevel"));
+										    		
+										    		String token = jwt.generateToken(tokenObject, new JWTOptions().setExpiresInSeconds(60));
+										    		LOGGER.info("JWT TOKEN CREATED AT WEB LOGIN: " + token + ", From IP:" + routingContext.request().remoteAddress());
+					
+										    		tokenObject.put("jwt", token);
+										        	
+										    		//Not going to use session variables
+										    		
+										    		//SetupSession setupSession = new SetupSession(vertx);
+										        	//LOGGER.info("created the session object");
+										        	//setupSession.putTokenInSession(routingContext, "token", token);
+										        	//setupSession.putTokenInSession(routingContext, "tokenObject", tokenObject.toString());
+										    		
+										    		// Now we add the cookie values to the system such that they can be used for future manipulation
+										    		AuthUtils au = new AuthUtils();
+										    		
+										    		Cookie cookie  = au.createCookie(routingContext, 600, name, token, "/");
+										    		
+										    		response.addCookie(cookie);
+										    		response.setChunked(true);
+										    		response.putHeader("Authorization", dbObject.getValue("authlevel").toString());
+										    		response.putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+										    		//response.putHeader("content-type", "application/json");
+										    		response.putHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET");
+										    		//response.send("{\"redirect\":\"loggedin\\dashboard.ftl\"}");
+										    		
+										    		
+										    		engine.render(tokenObject, "templates/loggedIn/dashboard.ftl", 
+											   			     resy -> 
+											   				 {
+											   					
+											   					 if (resy.succeeded()) 
+											   		             {
+											   						String renderedContent = resy.result().toString();
+											   						if (renderedContent.isEmpty()) 
+											   						{
+											   				            LOGGER.error("Rendered content is empty!");
+											   				            
+											   				        }
+											   						LOGGER.info(renderedContent);
+											   						routingContext.response().end(renderedContent);
+											   		            	LOGGER.debug("Successfully sent template");
+											   		             } 
+											   		             else 
+											   		             {
+											   		            	routingContext.fail(resy.cause());
+											   		            	LOGGER.error("Unable to send template : " + resy.cause().getMessage());
+											   		             }
+											   				 });
+										         }
+				                              }
+				                              else
+				                              {
+				                                	LOGGER.error("*Potential security violation* Signin error for username: " + map.get("username") + ", at IP:" + routingContext.request().remoteAddress());
+									        		response.sendFile("index.html");
+				                              }
+		                        		});
+				            }
+						});
+			    }	
+				           
 			    
 		  }
 		  catch(Exception e)
 		  {
-			  LOGGER.info("ERROR: " + e.toString());
+			  LOGGER.info("ERROR on weblogin: " + e.toString());
+			  response.sendFile("index.html");
 		  }
 	}
 	/** **********************************************************/
@@ -610,16 +640,12 @@ public class SetupPostHandlers
 				int authlevel  = payload.getInteger("authlevel");
 				
 				//The map is passed to the SQL query
-				
 				Map<String,Object> map = new HashMap<String, Object>();
 				map.put("username", payload.getValue("username"));
 				LOGGER.info("Accessible Level is : " + authlevel);
-		        
-			    LOGGER.info("username: " + map.get("username"));
+		        LOGGER.info("username: " + map.get("username"));
 			   
-			    
-				
-				pool.getConnection(ar -> {
+			    pool.getConnection(ar -> {
 		            if (ar.succeeded()) 
 		            {
 		                SqlConnection connection = ar.result();
@@ -691,10 +717,7 @@ public class SetupPostHandlers
 				.putHeader("content-type", "application/json")
 				.end("{\"result\":\"Fail\", \"reason\": \"invalid authorization token\"}"); 
 			}
-		
 		} 
-		            
-		
 	}
 	/**
 	 * @return **********************************************************/
