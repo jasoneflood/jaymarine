@@ -575,6 +575,22 @@ public class SetupPostHandlers
 	private void handleValidateUserStatus(RoutingContext routingContext) 
 	{
 		LOGGER.info("Inside SetupPostHandlers.handleValidateUserStatus");  
+		
+		
+		/*****************************************************************************/
+	    
+		Context context = routingContext.vertx().getOrCreateContext();
+		Pool pool = context.get("pool");
+		
+		if (pool == null)
+		{
+			LOGGER.debug("pull is null - restarting");
+			DatabaseController DB = new DatabaseController(routingContext.vertx());
+			LOGGER.debug("Taking the refreshed context pool object");
+			pool = context.get("pool");
+		}
+		
+		/*****************************************************************************/
 		HttpServerResponse response = routingContext.response();
 		JsonObject JSONpayload = routingContext.getBodyAsJson();
 		LOGGER.info(JSONpayload);
@@ -598,54 +614,86 @@ public class SetupPostHandlers
 				Map<String,Object> map = new HashMap<String, Object>();
 				map.put("username", payload.getValue("username"));
 				LOGGER.info("Accessible Level is : " + authlevel);
-		        		
-		        /*
-		         * select username, active from tb_user where username = #{username};
-		         * 
-		         * DST.validateUserStatus
-		        .execute(map)
-		    	.onSuccess(result -> 
-		    	{
-		    		Object obj_inner = null; //We will use this to Create a JSON object of all the data we will use to drive a session.
-		    	    Iterator itor_inner = result.iterator();
-		    	    JsonArray body = new JsonArray();
-		    	    boolean active = true;
-		    	    while(itor_inner.hasNext())                  // checks if there is an element to be visited.
-				    {
-		    	        			obj_inner = itor_inner.next(); //There should only be one.
-		    	        			JsonObject dbObject_inner = new JsonObject(obj_inner.toString());
-		    	        			LOGGER.debug("Recieved (handleValidateUserStatus): " + obj_inner);
-		    	        			if(dbObject_inner.getString("active").compareToIgnoreCase("inactive") == 0)
-		    	        			{
-		    	        				LOGGER.error("**Potential security violation* STATUS ERROR**, From IP:" + routingContext.request().remoteAddress() + " for username: " + dbObject_inner.getString("username"));
-		    	        				active = false;
-		    	        			}
-				    }	
-
-					LOGGER.info("Successfully ran query: handleValidateUserStatus");
-					if(!active)
-					{
-						response
-			        	.putHeader("content-type", "application/json")
-			        	.end("{\"result\":\"Fail\", \"reason\": \"inactive\"}");
-			    	}
-					else
-					{
-						response
-			        	.putHeader("content-type", "application/json")
-			        	.end("{\"result\":\"ok\", \"reason\": \"ok\"}");
-					}
-		    	}); */
-		    }
+		        
+			    LOGGER.info("username: " + map.get("username"));
+			   
+			    
+				
+				pool.getConnection(ar -> {
+		            if (ar.succeeded()) 
+		            {
+		                SqlConnection connection = ar.result();
+		                
+		                JsonArray ja = new JsonArray();
+		                
+		                // Execute a SELECT query
+		                connection.preparedQuery("select username, active from tb_user where username = $1")
+                        .execute(Tuple.of(map.get("username")), 
+                        res -> 
+                        {
+                        			if (res.succeeded()) 
+		                            {
+                        				boolean active = true;
+                        				RowSet<Row> rows = res.result();
+			                            rows.forEach(row -> 
+			                            {
+			                               JsonObject jo = new JsonObject(row.toJson().encode());
+			                               ja.add(jo);
+			                               LOGGER.debug("Found user: " + ja.encodePrettily());
+			                            });
+			                            LOGGER.debug("Result size: " + ja.size());
+			                            if(ja.size() > 0)
+			                            {
+			                            	LOGGER.debug("Found user: " + ja.encodePrettily());
+			                                JsonObject dbObject = ja.getJsonObject(0);
+			                                if(dbObject.getString("active").compareToIgnoreCase("inactive") == 0)
+				    	        			{
+				    	        				LOGGER.error("**Potential security violation* STATUS ERROR**, From IP:" + routingContext.request().remoteAddress() + " for username: " + dbObject.getString("username"));
+				    	        				active = false;
+				    	        			}
+			                            }
+			                            LOGGER.info("Successfully ran query: handleValidateUserStatus");
+			        					if(!active)
+			        					{
+			        						response
+			        			        	.putHeader("content-type", "application/json")
+			        			        	.end("{\"result\":\"Fail\", \"reason\": \"inactive\"}");
+			        			    	}
+			        					else
+			        					{
+			        						response
+			        			        	.putHeader("content-type", "application/json")
+			        			        	.end("{\"result\":\"ok\", \"reason\": \"ok\"}");
+			        					} 
+		                            }
+                        			else
+                        			{
+                        				response
+                        				.putHeader("content-type", "application/json")
+                        				.end("{\"result\":\"Fail\", \"reason\": \"invalid authorization token\"}"); 
+                        			}
+                        })
+                        ;
+		            }
+		            else 
+		            {
+		            	LOGGER.error("Unable to validate user status: " + ar.cause().getMessage());
+		            	response
+        				.putHeader("content-type", "application/json")
+        				.end("{\"result\":\"Fail\", \"reason\": \"invalid authorization token\"}"); 
+		            }
+				});
+			}
 			else
 			{
+				LOGGER.error("Invalid or no JWT token passed in payload : " + JSONpayload.encodePrettily());
 				response
-                .putHeader("content-type", "application/json")
-                .end("{\"result\":\"Fail\", \"reason\": \"invalid authorization token\"}"); 
+				.putHeader("content-type", "application/json")
+				.end("{\"result\":\"Fail\", \"reason\": \"invalid authorization token\"}"); 
 			}
-			
-		}
 		
+		} 
+		            
 		
 	}
 	/**
