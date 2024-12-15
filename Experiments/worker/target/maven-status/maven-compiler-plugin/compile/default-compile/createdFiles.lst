@@ -1,5 +1,6 @@
 metrics\thejasonengine\com\Telemetary.class
 cluster\thejasonengine\com\ClusteredVerticle.class
+pojos\thejasonengine\com\DatasourcePojo.class
 models\thejasonengine\com\User.class
 authentication\thejasonengine\com\AuthService.class
 manager\thejasonengine\com\Admin.class
@@ -11,6 +12,7 @@ authentication\thejasonengine\com\CustomAuthentication.class
 service\thejasonengine\com\WebVerticle.class
 authentication\thejasonengine\com\AuthUtils.class
 messaging\thejasonengine\com\PublisherVerticle.class
+database\thejasonengine\com\AgentDatabaseController.class
 session\thejasonengine\com\SetupSession.class
 file\thejasonengine\com\Read.class
 authentication\thejasonengine\com\AuthRouter.class

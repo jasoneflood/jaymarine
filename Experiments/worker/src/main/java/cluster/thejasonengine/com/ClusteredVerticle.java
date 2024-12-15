@@ -31,6 +31,7 @@ import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.sqlclient.Pool;
 import router.thejasonengine.com.SetupPostHandlers;
 import session.thejasonengine.com.SetupSession;
+import database.thejasonengine.com.AgentDatabaseController;
 
 
 import io.vertx.ext.web.common.template.TemplateEngine;
@@ -47,6 +48,7 @@ public class ClusteredVerticle extends AbstractVerticle {
 	private AuthUtils AU;
 	private SetupSession setupSession;
 	private SetupPostHandlers setupPostHandlers;
+	private AgentDatabaseController agentDatabaseController;
 	private static Pool pool;
 	
 	
@@ -74,7 +76,9 @@ public class ClusteredVerticle extends AbstractVerticle {
 		
 		setupPostHandlers = new SetupPostHandlers(vertx);
 		LOGGER.info("Set Handlers Setup");
-				
+		
+		agentDatabaseController = new AgentDatabaseController(vertx);
+		LOGGER.info("Set up Agent based Controller");
 		
 		Router router = Router.router(vertx);
 		
@@ -326,6 +330,16 @@ public class ClusteredVerticle extends AbstractVerticle {
 	  	/***************************************************************************************/
     	
     	
+	  	/*********************************************************************************/
+	  	/*These are the controller APIs for the various databases we want to drive     				     */
+	  	/*********************************************************************************/
+	  	
+	  	
+	  	/*This requires a post with payload {"databaseId":"postgres"}     				   */
+	  	router.post("/api/sendDatabaseSelect").handler(BodyHandler.create()).handler(agentDatabaseController.agentDatabase);
+	  	
+	  	 
+	  	 
   	  	/***************************************************************************************/
     	router.get("/api/simpleTest").handler(setupPostHandlers.simpleTest);
     	router.get("/api/simpleDBTest").handler(setupPostHandlers.simpleDBTest);

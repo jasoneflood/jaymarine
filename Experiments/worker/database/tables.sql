@@ -4,12 +4,9 @@ BEGIN
 
 RAISE NOTICE 'Dropping existing tables with cascade!';
 drop table if exists public.tb_user CASCADE;
-
+drop table if exists public.tb_query CASCADE;
 
 RAISE NOTICE 'All tables dropped!';
-
-
-
 
 CREATE TABLE IF NOT EXISTS public.tb_user
 (
@@ -27,7 +24,15 @@ CREATE TABLE IF NOT EXISTS public.tb_user
 RAISE NOTICE 'Created tb_user';
 
 
+CREATE TABLE IF NOT EXISTS public.tb_query
+(
+    id serial NOT NULL,
+	query_db_type int NOT NULL,
+	query_string  TEXT NOT NULL, 
+    query_type character varying(100),
+    PRIMARY KEY (id)
+);
 
-
+RAISE NOTICE 'Created tb_query';
 
 END;$$;
