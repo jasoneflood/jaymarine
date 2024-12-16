@@ -168,6 +168,112 @@ public class SetupPostHandlers
 	}
 	/****************************************************************/
 	/*	
+	 	Accessed via get route: /api/addDatabaseQuery
+	 	{
+	 		"jwt":"",
+	 		"query_db_type":"postgres",
+	 		"db_connection_string":""
+	 		"query_string":"",
+	 		"query_type":""
+	 	}
+	*/
+	/****************************************************************/
+	private void handleAddDatabaseQuery(RoutingContext routingContext) 
+	{
+		
+		LOGGER.info("Inside SetupPostHandlers.handleAddDatabaseQuery");  
+		
+		Context context = routingContext.vertx().getOrCreateContext();
+		Pool pool = context.get("pool");
+		
+		if (pool == null)
+		{
+			LOGGER.debug("pull is null - restarting");
+			DatabaseController DB = new DatabaseController(routingContext.vertx());
+			LOGGER.debug("Taking the refreshed context pool object");
+			pool = context.get("pool");
+		}
+		
+		HttpServerResponse response = routingContext.response();
+		JsonObject JSONpayload = routingContext.getBodyAsJson();
+		
+		if (JSONpayload.getString("jwt") == null) 
+	    {
+	    	LOGGER.info("handleAddDatabaseQuery required fields not detected (jwt)");
+	    	routingContext.fail(400);
+	    } 
+		else
+		{
+			if(validateJWTToken(JSONpayload))
+			{
+				LOGGER.info("jwt: " + JSONpayload.getString("jwt") );
+				String [] chunks = JSONpayload.getString("jwt").split("\\.");
+				JsonObject payload = new JsonObject(decode(chunks[1]));
+				LOGGER.info("Payload: " + payload );
+				int authlevel  = payload.getInteger("authlevel");
+				
+				//The map is passed to the SQL query
+				Map<String,Object> map = new HashMap<String, Object>();
+				map.put("username", payload.getValue("username"));
+				LOGGER.info("Accessible Level is : " + authlevel);
+		        LOGGER.info("username: " + map.get("username"));
+		        response
+		        .putHeader("content-type", "application/json");
+				
+				pool.getConnection(ar -> 
+				{
+		            if (ar.succeeded()) 
+		            {
+		                SqlConnection connection = ar.result();
+		                JsonArray ja = new JsonArray();
+		                
+		                // Execute a SELECT query
+		                connection.query("SELECT * FROM public.tb_user")
+		                        .execute(res -> {
+		                            if (res.succeeded()) 
+		                            {
+		                                // Process the query result
+		                                RowSet<Row> rows = res.result();
+		                                rows.forEach(row -> {
+		                                    // Print out each row
+		                                    LOGGER.info("Row: " + row.toJson());
+		                                    try
+		                                    {
+		                                    	JsonObject jo = new JsonObject(row.toJson().encode());
+		                                    	ja.add(jo);
+		                                    	LOGGER.info("Successfully added json object to array");
+		                                    }
+		                                    catch(Exception e)
+		                                    {
+		                                    	LOGGER.error("Unable to add JSON Object to array: " + e.toString());
+		                                    }
+		                                    
+		                                });
+		                                response.send(ja.encodePrettily());
+		                            } 
+		                            else 
+		                            {
+		                                // Handle query failure
+		                            	LOGGER.error("error: " + res.cause() );
+		                            	response.send(res.cause().getMessage());
+		                                //res.cause().printStackTrace();
+		                            }
+		                            // Close the connection
+		                            //response.end();
+		                            connection.close();
+		                        });
+		            } else {
+		                // Handle connection failure
+		                ar.cause().printStackTrace();
+		                response.send(ar.cause().getMessage());
+		            }
+		            
+		        });
+			}
+		}
+	}
+	/****************************************************************/
+	/*	
 	 	Accessed via post route: /api/login
 	 	handleRegisterUser takes in a POST JSON Body Payload as:
 	 	{
@@ -457,20 +563,21 @@ public class SetupPostHandlers
 			    {
 			    		//JsonObject temp = new JsonObject();
 			    		boolean verified = true;
-			    		LOGGER.info("Starting login prep for username: " + loginPayloadJSON.getValue("username"));
+			    		LOGGER.info("Starting login prep for username: " + loginPayloadJSON.getValue("username") );
 			    		
 			    		Map<String,Object> map = new HashMap<String, Object>();  
 				    	map.put("username", loginPayloadJSON.getValue("username"));
 				    	map.put("password", hashAndSaltPass(loginPayloadJSON.getValue("password").toString()));
 				    	
-				    	
+				    	LOGGER.debug("map username: " + map.get("username"));
+				    	LOGGER.debug("map password: " + map.get("password"));
 				    	/*****************************************************************************/
 					    Context context = routingContext.vertx().getOrCreateContext();
 						Pool pool = context.get("pool");
 						
 						if (pool == null)
 						{
-							LOGGER.debug("pull is null - restarting");
+							LOGGER.debug("pool is null - restarting");
 							DatabaseController DB = new DatabaseController(routingContext.vertx());
 							LOGGER.debug("Taking the refreshed context pool object");
 							pool = context.get("pool");
@@ -832,7 +939,7 @@ public class SetupPostHandlers
 	 * @returns actual password in db for match
 	 * 
 	 */
-	private static String hashAndSaltPass (String inputPass)
+	public static String hashAndSaltPass (String inputPass)
 	{
 		String salt = "Rasputin";
 		//hash the input password for later comparison with password in db

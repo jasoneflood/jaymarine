@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS public.tb_user
 
 RAISE NOTICE 'Created tb_user';
 
+insert into public.tb_user(firstname, surname, email, username, password, active, authlevel) VALUES('user_firstname', 'user_surname', 'user_email', 'username', 'password', 'active', 1);
+
 
 CREATE TABLE IF NOT EXISTS public.tb_query
 (
@@ -36,3 +38,37 @@ CREATE TABLE IF NOT EXISTS public.tb_query
 RAISE NOTICE 'Created tb_query';
 
 END;$$;
+
+/*************************************************************************************/
+
+CREATE FUNCTION function_login(var_username TEXT, var_password TEXT)
+returns table (
+		id integer,
+        firstname varchar,
+        surname varchar,
+        email varchar,
+        username varchar,
+        active varchar,
+		authlevel integer
+        
+	)
+    AS $$ 
+
+    BEGIN
+    RAISE NOTICE 'Username:  % Password: %' , var_username, var_password;
+    
+   	return query 
+        select
+		    tb_user.id,
+            tb_user.firstname,
+            tb_user.surname,
+            tb_user.email,
+            tb_user.username,
+            tb_user.active,
+		    tb_user.authlevel
+		from
+			tb_user
+        where tb_user.username = var_username AND tb_user.password = var_password;
+END
+$$  LANGUAGE plpgsql;
+

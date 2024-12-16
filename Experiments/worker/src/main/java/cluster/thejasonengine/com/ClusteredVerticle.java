@@ -191,6 +191,24 @@ public class ClusteredVerticle extends AbstractVerticle {
 			    			//ctx.response().sendFile("webroot/index.htm"); //drop starting slash
 			    		}
 				 });
+		/***************************************************************************************/
+		router.get("/api/passwordGenerator/:password").handler(
+    		    ctx -> 
+    		    	{
+    		    		
+    		    		String password = ctx.request().getParam("password");
+    		    		
+    		    		ctx.response().putHeader("Content-Type", "application/json");
+    		    		
+    		    		String result = SetupPostHandlers.hashAndSaltPass(password.toString());
+    		    		
+    		    		JsonObject response = new JsonObject();
+    	   	         	response.put("password", result);
+    	   	         	LOGGER.info("Successfully generated password token " + result);
+    		    		ctx.response().end(response.toString());
+    		    		
+    		    	}
+    		    );
         
 		/***************************************************************************************/
     	/*
