@@ -50,6 +50,7 @@ public class SetupPostHandlers
 	public Handler<RoutingContext> createSession;
 	public Handler<RoutingContext> validateUserStatus;
 	public Handler<RoutingContext> webLogin;
+	public Handler<RoutingContext> addDatabaseQuery;
 		
 	public SetupPostHandlers(Vertx vertx)
     {
@@ -61,7 +62,7 @@ public class SetupPostHandlers
 		createSession = SetupPostHandlers.this::handleCreateSession;
 		validateUserStatus =  SetupPostHandlers.this::handleValidateUserStatus;
 		webLogin = SetupPostHandlers.this::handleWebLogin;
-		
+		addDatabaseQuery = SetupPostHandlers.this::handleAddDatabaseQuery;
 		//DST = v_DST;
 		
 	}
@@ -208,67 +209,92 @@ public class SetupPostHandlers
 			{
 				LOGGER.info("jwt: " + JSONpayload.getString("jwt") );
 				String [] chunks = JSONpayload.getString("jwt").split("\\.");
+				
 				JsonObject payload = new JsonObject(decode(chunks[1]));
 				LOGGER.info("Payload: " + payload );
 				int authlevel  = payload.getInteger("authlevel");
+				String query = JSONpayload.getString("query_string");
+				
+				LOGGER.debug("Query recieved: " + query);
+				
+				utils.thejasonengine.com.Encodings Encodings = new utils.thejasonengine.com.Encodings();
+				
+				String encoded_query = Encodings.EscapeString(query);
+				LOGGER.debug("Query recieved: " + query);
+				LOGGER.debug("Query encoded: " + encoded_query);
 				
 				//The map is passed to the SQL query
 				Map<String,Object> map = new HashMap<String, Object>();
 				map.put("username", payload.getValue("username"));
 				LOGGER.info("Accessible Level is : " + authlevel);
 		        LOGGER.info("username: " + map.get("username"));
-		        response
-		        .putHeader("content-type", "application/json");
-				
-				pool.getConnection(ar -> 
-				{
-		            if (ar.succeeded()) 
-		            {
-		                SqlConnection connection = ar.result();
-		                JsonArray ja = new JsonArray();
-		                
-		                // Execute a SELECT query
-		                connection.query("SELECT * FROM public.tb_user")
-		                        .execute(res -> {
-		                            if (res.succeeded()) 
-		                            {
-		                                // Process the query result
-		                                RowSet<Row> rows = res.result();
-		                                rows.forEach(row -> {
-		                                    // Print out each row
-		                                    LOGGER.info("Row: " + row.toJson());
-		                                    try
-		                                    {
-		                                    	JsonObject jo = new JsonObject(row.toJson().encode());
-		                                    	ja.add(jo);
-		                                    	LOGGER.info("Successfully added json object to array");
-		                                    }
-		                                    catch(Exception e)
-		                                    {
-		                                    	LOGGER.error("Unable to add JSON Object to array: " + e.toString());
-		                                    }
-		                                    
-		                                });
-		                                response.send(ja.encodePrettily());
-		                            } 
-		                            else 
-		                            {
-		                                // Handle query failure
-		                            	LOGGER.error("error: " + res.cause() );
-		                            	response.send(res.cause().getMessage());
-		                                //res.cause().printStackTrace();
-		                            }
-		                            // Close the connection
-		                            //response.end();
-		                            connection.close();
-		                        });
-		            } else {
-		                // Handle connection failure
-		                ar.cause().printStackTrace();
-		                response.send(ar.cause().getMessage());
-		            }
-		            
-		        });
+		        
+		        if(authlevel >= 1)
+		        {
+		        	LOGGER.debug("User allowed to execute the API");
+		        	response
+			        .putHeader("content-type", "application/json");
+					
+					pool.getConnection(ar -> 
+					{
+			            if (ar.succeeded()) 
+			            {
+			                SqlConnection connection = ar.result();
+			                JsonArray ja = new JsonArray();
+			                
+			                // Execute a SELECT query
+			                connection.query("SELECT * FROM public.tb_user")
+			                        .execute(res -> {
+			                            if (res.succeeded()) 
+			                            {
+			                                // Process the query result
+			                                RowSet<Row> rows = res.result();
+			                                rows.forEach(row -> {
+			                                    // Print out each row
+			                                    LOGGER.info("Row: " + row.toJson());
+			                                    try
+			                                    {
+			                                    	JsonObject jo = new JsonObject(row.toJson().encode());
+			                                    	ja.add(jo);
+			                                    	LOGGER.info("Successfully added json object to array");
+			                                    }
+			                                    catch(Exception e)
+			                                    {
+			                                    	LOGGER.error("Unable to add JSON Object to array: " + e.toString());
+			                                    }
+			                                    
+			                                });
+			                                response.send(ja.encodePrettily());
+			                            } 
+			                            else 
+			                            {
+			                                // Handle query failure
+			                            	LOGGER.error("error: " + res.cause() );
+			                            	response.send(res.cause().getMessage());
+			                                //res.cause().printStackTrace();
+			                            }
+			                            // Close the connection
+			                            //response.end();
+			                            connection.close();
+			                        });
+			            } else {
+			                // Handle connection failure
+			                ar.cause().printStackTrace();
+			                response.send(ar.cause().getMessage());
+			            }
+			            
+			        });
+		        }
+		        else
+		        {
+		        	JsonArray ja = new JsonArray();
+		        	JsonObject jo = new JsonObject();
+		        	jo.put("Error", "Issufficent authentication level to run API");
+		        	ja.add(jo);
+		        	response.send(ja.encodePrettily());
+		        }
+		        
+		        
 			}
 		}
 	}

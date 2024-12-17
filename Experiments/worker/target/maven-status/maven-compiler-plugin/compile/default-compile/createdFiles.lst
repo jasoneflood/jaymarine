@@ -16,3 +16,4 @@ database\thejasonengine\com\AgentDatabaseController.class
 session\thejasonengine\com\SetupSession.class
 file\thejasonengine\com\Read.class
 authentication\thejasonengine\com\AuthRouter.class
+utils\thejasonengine\com\Encodings.class
