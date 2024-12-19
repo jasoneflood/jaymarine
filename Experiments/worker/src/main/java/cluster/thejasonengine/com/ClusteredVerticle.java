@@ -29,6 +29,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.sqlclient.Pool;
+import memory.thejasonengine.com.Ram;
 import router.thejasonengine.com.SetupPostHandlers;
 import session.thejasonengine.com.SetupSession;
 import database.thejasonengine.com.AgentDatabaseController;
@@ -68,6 +69,10 @@ public class ClusteredVerticle extends AbstractVerticle {
 		
 		/* Create a DB instance called jdbcClient and add it to the context */
 		DatabaseController DB = new DatabaseController(vertx);
+		
+		/*Create the RAM object that will store and reference data for the worker*/
+		Ram ram = new Ram();
+	  	ram.initializeSharedMap(vertx);
 		
 		AU = new AuthUtils();
 		jwt = AU.createJWTToken(context);
@@ -349,7 +354,8 @@ public class ClusteredVerticle extends AbstractVerticle {
     	
 	  	 router.post("/api/addDatabaseQuery").handler(BodyHandler.create()).handler(setupPostHandlers.addDatabaseQuery);
 	  	 router.post("/api/getDatabaseQueryByDbType").handler(BodyHandler.create()).handler(setupPostHandlers.getDatabaseQueryByDbType);
-	  	 
+	  	 router.post("/api/getDatabaseConnections").handler(BodyHandler.create()).handler(setupPostHandlers.getDatabaseConnections);
+	  	 router.post("/api/setDatabaseConnections").handler(BodyHandler.create()).handler(setupPostHandlers.setDatabaseConnections);
 	  	 
 	  	/*********************************************************************************/
 	  	/*These are the controller APIs for the various databases we want to drive     				     */

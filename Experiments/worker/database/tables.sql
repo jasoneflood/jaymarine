@@ -5,6 +5,7 @@ BEGIN
 RAISE NOTICE 'Dropping existing tables with cascade!';
 drop table if exists public.tb_user CASCADE;
 drop table if exists public.tb_query CASCADE;
+drop table if exists public.tb_databaseConnections CASCADE;
 
 RAISE NOTICE 'All tables dropped!';
 
@@ -37,8 +38,45 @@ CREATE TABLE IF NOT EXISTS public.tb_query
 
 RAISE NOTICE 'Created tb_query';
 
-END;$$;
 
+
+
+/*{
+        "status": "option",
+        "active": "true",
+        "db_type": "db2",
+        "db_version": "14.00",
+        "db_username": "db2inst1",
+        "db_password": "guardium",
+        "db_port": "50000",
+        "db_database": "GOSALES",
+        "db_url": "127.0.0.1",
+        "db_jdbcClassName": "com.ibm.db2.jcc.DB2Driver",
+        "db_user_icon":"personbeardcolor.png",
+        "db_databaseIcon":""
+    }
+/************************************************************************************/
+CREATE TABLE IF NOT EXISTS public.tb_databaseConnections
+(
+    id serial NOT NULL,
+    status character varying(100),
+    db_type character varying(100),
+    db_version character varying(100),
+    db_username character varying(100),
+    db_password character varying(100),
+   	db_port character varying(100),
+    db_database character varying(100),
+    db_url character varying(100),
+   	db_jdbcClassName character varying(100),
+    db_userIcon character varying(100),
+   	db_databaseIcon character varying(100),
+    PRIMARY KEY (id)
+);
+
+RAISE NOTICE 'Created tb_databaseConnections';
+
+
+END;$$;
 /*************************************************************************************/
 
 CREATE FUNCTION function_login(var_username TEXT, var_password TEXT)

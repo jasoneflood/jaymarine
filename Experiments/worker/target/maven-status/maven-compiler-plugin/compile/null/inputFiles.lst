@@ -1,5 +1,6 @@
 C:\Git\jaymarine\Experiments\worker\src\main\java\messaging\thejasonengine\com\SubscriberVerticle.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\authentication\thejasonengine\com\AuthHandler.java
+C:\Git\jaymarine\Experiments\worker\src\main\java\memory\thejasonengine\com\Ram.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\session\thejasonengine\com\SetupSession.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\pojos\thejasonengine\com\DatasourcePojo.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\utils\thejasonengine\com\Encodings.java
@@ -9,6 +10,7 @@ C:\Git\jaymarine\Experiments\worker\src\main\java\authentication\thejasonengine\
 C:\Git\jaymarine\Experiments\worker\src\main\java\database\thejasonengine\com\AgentDatabaseController.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\database\thejasonengine\com\DatabaseController.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\authentication\thejasonengine\com\AuthUtils.java
+C:\Git\jaymarine\Experiments\worker\src\main\java\demodata\thejasonengine\com\DatabaseManager.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\service\thejasonengine\com\WebVerticle.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\manager\thejasonengine\com\Admin.java
 C:\Git\jaymarine\Experiments\worker\src\main\java\models\thejasonengine\com\User.java
