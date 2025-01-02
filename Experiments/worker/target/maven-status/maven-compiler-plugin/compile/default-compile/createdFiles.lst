@@ -12,6 +12,8 @@ authentication\thejasonengine\com\CustomAuthentication.class
 service\thejasonengine\com\WebVerticle.class
 authentication\thejasonengine\com\AuthUtils.class
 messaging\thejasonengine\com\PublisherVerticle.class
+demodata\thejasonengine\com\DatabaseManager.class
+memory\thejasonengine\com\Ram.class
 database\thejasonengine\com\AgentDatabaseController.class
 session\thejasonengine\com\SetupSession.class
 file\thejasonengine\com\Read.class
