@@ -479,7 +479,7 @@ void setup()
 
 
   /* BOFLED */
-
+/*
   ledcSetup(0, 5000, 8); // Channel 0, 5000 Hz, 8-bit resolution
   ledcSetup(1, 5000, 8); // Channel 1, 5000 Hz, 8-bit resolution
   ledcSetup(2, 5000, 8); // Channel 2, 5000 Hz, 8-bit resolution
@@ -488,6 +488,7 @@ void setup()
   ledcAttachPin(greenPin, 1); // Attach green pin to channel 1
   ledcAttachPin(bluePin, 2);  // Attach blue pin to channel 2
 
+*/
   /* EOF LED */
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) 
   { 
