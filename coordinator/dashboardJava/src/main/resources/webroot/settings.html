@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Settings – My Portfolio</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <style>
+    body {
+      padding-bottom: 80px; /* space for fixed footer */
+      background-color: #f8f9fa;
+    }
+    .settings-card {
+      max-width: 600px;
+      width: 100%;
+      margin: 3rem auto;
+    }
+    footer {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Portfolio</a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+      aria-controls="navbarNav"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#">Settings</a></li>
+        <li class="nav-item"><a class="nav-link" href="logout.html">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="card settings-card shadow-sm">
+    <div class="card-header text-center bg-white border-0 pt-4">
+      <h2 class="h4 mb-0">User Settings</h2>
+      <p class="text-muted small">Manage your account preferences</p>
+    </div>
+    <div class="card-body">
+      <form>
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="username" placeholder="Username" required />
+          <label for="username">Username</label>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="email" class="form-control" id="email" placeholder="email@example.com" required />
+          <label for="email">Email address</label>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="password" class="form-control" id="current-password" placeholder="Current Password" />
+          <label for="current-password">Current Password</label>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="password" class="form-control" id="new-password" placeholder="New Password" />
+          <label for="new-password">New Password</label>
+        </div>
+
+        <div class="form-floating mb-3">
+          <input type="password" class="form-control" id="confirm-password" placeholder="Confirm New Password" />
+          <label for="confirm-password">Confirm New Password</label>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Notification Preferences</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="email-notifications" checked />
+            <label class="form-check-label" for="email-notifications">
+              Email Notifications
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="sms-notifications" />
+            <label class="form-check-label" for="sms-notifications">
+              SMS Notifications
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+      </form>
+    </div>
+  </div>
+</main>
+
+<footer class="fixed-bottom text-center py-3 border-top">
+  <p class="mb-0">Footer Text</p>
+</footer>
+
+<!-- Bootstrap 5 JS (with Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
