@@ -80,7 +80,6 @@ public class SetupPostHandlers
 	
 	public Handler<RoutingContext> simpleTest; 
 	
-	
 	public SetupPostHandlers(Vertx vertx)
     {
 		simpleTest = SetupPostHandlers.this::handleSimpleTest;
