@@ -47,7 +47,7 @@ public class WebService extends AbstractVerticle
 	private static final Logger LOGGER = LogManager.getLogger(WebService.class);
 	  private static final String CHAT_CHANNEL = "SocketChat";
 	  private WebSocket wsCtx;
-	  private int SocketPort = 3200;
+	  private int SocketPort = 8080;
 	  private String SocketDomain = "127.0.0.1";
 	  private String SocketConnectionId = "/websocket/coordinator/admin/administrator";
 	  private HashSet<WebSocketClient> wsClients = new HashSet<WebSocketClient>();

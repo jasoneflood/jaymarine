@@ -1,5 +1,3 @@
-#include <QMC5883LCompass.h>
-
 /*********
  Author: Jason Flood
  Codebase: esp32_agentTemplate_v1
@@ -22,8 +20,12 @@ This is to support API requests and handling from potential worker evolutions.
 
 WebSocketsClient webSocket;
 
-const char* ssid = "jaymarine";
-const char* ss_password = "passpass";
+//const char* ssid = "jasonmarine-live";
+//const char* ss_password = "passpass";
+
+const char* ssid = "suttonzoo";
+const char* ss_password = "Happyh1pp0";
+
 
 String WORKER_IP_ADDRESS = "0.0.0.0";
 
@@ -35,19 +37,44 @@ String SOCKET_SERVER_PORT = "3200";
 AsyncWebServer server(80); // The HTTP Server is run on port 80
 #define USE_SERIAL Serial1
 
+#define PIN_RED    25 // GPIO23
+#define PIN_GREEN  26 // GPIO22
+#define PIN_BLUE   27 // GPIO21
+
+void flashRGB(int, int, int);
+int rest_red;
+int rest_blue;
+int rest_green;
+
 const char* PARAM_INPUT_1 = "setting";
 const char* PARAM_INPUT_2 = "svalue";
+
+unsigned long lastSendTime = 0;  // keeps track of last message send time
 
 uint addr = 0;
 struct {
   uint val = 0;
-  char workerName[50] = "";
-  char sensorURL[50] = "";
-  char ssid[20] = "";
-  char ss_password[20] = "";
-  char socket_server_ip[50]= "";
-  char socket_server_port[8]="";
-} configData;
+  char endpointName[50];
+  char endpointUrl[50];
+  char ssid[20];
+  char ss_password[20];
+  char domain[50];
+  char protocol[10];
+  char socket_server_ip[50];
+  char socket_server_port[8];
+  char poll_frequency[3];
+} configData = {
+  1,                        // val
+  "endpoint_x",        // endpointName
+  "localhost",// endpointUrl
+  "jaymarine",             // ssid
+  "passpass",         // ss_password
+  "jaysboat.com",            // domain
+  "http",                  // protocol
+  "192.168.1.100",          // socket_server_ip
+  "80",                   // socket_server_port
+  "10"                      // poll_frequency
+};;
 
 
 const size_t capacity = JSON_OBJECT_SIZE(500); // Adjust size based on elements
@@ -55,7 +82,7 @@ DynamicJsonDocument doc(capacity);
 
 
 const char stream_html[]  PROGMEM = R"rawliteral(
-{"workerName":%workerName%,"sensorURL":%sensorURL%,"socket_server_ip":%socket_server_ip%,"socket_server_port":%socket_server_port%}
+{"endpointName":%endpointName%,"endpointUrl":%endpointUrl%,"domain":%domain%,"protocol":%protocol%, "socket_server_ip":%socket_server_ip%,"socket_server_port":%socket_server_port%, "poll_frequency":%poll_frequency%}
 )rawliteral";
 /*************************************/
 const char script_var[] PROGMEM = R"rawliteral(
@@ -262,8 +289,13 @@ String processor(const String& var)
   /******************************************************/
   if(var == "SOCKET_SERVER_IP_ADDRESS")
   {
-    return SOCKET_SERVER_IP_ADDRESS;
+    return configData.domain;
   }
+  if(var == "SOCKET_SERVER_PORT")
+  {
+    return configData.socket_server_port;
+  }
+
   /******************************************************/
   if(var == "ROWPLACEHOLDER_VAR")
   {
@@ -276,8 +308,20 @@ String processor(const String& var)
     rows += configData.ss_password;
     rows +="\"></td></tr>";
 
-    rows += "<tr><td>agentName</td><td><input type=\"text\" id=\"workerName\" onchange=\"updateSettings(this)\" value=\"";
-    rows += configData.workerName;
+    rows += "<tr><td>endpointName</td><td><input type=\"text\" id=\"endpointName\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.endpointName;
+    rows +="\"></td></tr>";
+
+    rows += "<tr><td>endpointUrl</td><td><input type=\"text\" id=\"endpointUrl\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.endpointUrl;
+    rows +="\"></td></tr>";
+
+    rows += "<tr><td>domain</td><td><input type=\"text\" id=\"domain\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.domain;
+    rows +="\"></td></tr>";
+
+    rows += "<tr><td>protocol</td><td><input type=\"text\" id=\"protocol\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.protocol;
     rows +="\"></td></tr>";
 
     rows += "<tr><td>socket_server_ip</td><td><input type=\"text\" id=\"socket_server_ip\" onchange=\"updateSettings(this)\" value=\"";
@@ -288,10 +332,9 @@ String processor(const String& var)
     rows += configData.socket_server_port;
     rows +="\"></td></tr>";
 
-    rows += "<tr><td>agentURL</td><td><input type=\"text\" id=\"sensorURL\" onchange=\"updateSettings(this)\" value=\"";
-    rows += configData.sensorURL;
+    rows += "<tr><td>poll_frequency</td><td><input type=\"text\" id=\"poll_frequency\" onchange=\"updateSettings(this)\" value=\"";
+    rows += configData.poll_frequency;
     rows +="\"></td></tr>";
-
     return rows;
   }
   /******************************************************/
@@ -415,15 +458,26 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length)
   {
 		case WStype_DISCONNECTED:
 			USE_SERIAL.printf("[WSc] Disconnected!\n");
+      rest_red = 255;
+      rest_green = 0;
+      rest_blue = 0;
+      
+      flashRGB(255,0,0);
+      
 			break;
 		case WStype_CONNECTED:
 			USE_SERIAL.printf("[WSc] Connected to url: %s\n", payload);
+      rest_red = 150;                                                                                             
+      rest_green = 150;
+      rest_blue = 150;
 
+      flashRGB(0,150,150);
 			// send message to server when Connected
 			webSocket.sendTXT("{\"status\":\"Connected\"}");
 			break;
 		case WStype_TEXT:
 			USE_SERIAL.printf("[WSc] get text: %s\n", payload);
+      flashRGB(255,255,255);
       
       /*************************** AGENT HAS RECIEVED A MESSAGE - THIS SHOULD BE A HEARTBEAT ****************************************/
       char myPayload[1000]; // Ensure the array is large enough to hold the final string
@@ -465,10 +519,44 @@ void setup()
   Serial.begin(9600);
   //Wire.begin(D6, D5); /* join i2c bus with SDA=D6 and SCL=D5 of NodeMCU */
 
+  rest_red = 0;
+  rest_blue = 0;
+  rest_green = 0;
+  
+
   Serial.println("Setting up ESP 32 WROOM");
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(configData.ssid);
+
+  Serial.println("Setting up LED");
+  pinMode(PIN_RED,   OUTPUT);
+  pinMode(PIN_GREEN, OUTPUT);
+  pinMode(PIN_BLUE,  OUTPUT);
+
+  analogWrite(PIN_RED,   0);
+  analogWrite(PIN_GREEN, 0);
+  analogWrite(PIN_BLUE,  0);
+
+  analogWrite(PIN_RED,   255);
+  analogWrite(PIN_GREEN, 0);
+  analogWrite(PIN_BLUE,  0);
+
+  delay(1000);
+
+  analogWrite(PIN_RED,   0);
+  analogWrite(PIN_GREEN, 255);
+  analogWrite(PIN_BLUE,  0);
+
+  delay(1000);
+
+  analogWrite(PIN_RED,   0);
+  analogWrite(PIN_GREEN, 0);
+  analogWrite(PIN_BLUE,  255);
+
+  delay(1000);
+
+
 
   EEPROM.begin(512);
   // read bytes (i.e. sizeof(configData) from "EEPROM"),
@@ -486,9 +574,15 @@ void setup()
   {
     delay(500);
     Serial.print(".");
+    flashRGB(255,255,255);
     j = j+1;
+
+    
+
     if(j == allowedConnectTime)
     {
+      
+
       /*basically at this point the wifi is not connecting, so moving towards a default hotspot*/
       Serial.println("Unable to connect to configured wifi - moving to reserve connectivity");
       Serial.println("Will try to connect to SSID: ");
@@ -500,6 +594,7 @@ void setup()
       {
          delay(500);
          Serial.print(".");
+         flashRGB(100,100,100);   
       }
     }
   }
@@ -508,6 +603,12 @@ void setup()
   Serial.println(WiFi.localIP()); 
 
   WORKER_IP_ADDRESS = WiFi.localIP().toString();
+  
+  //Default light state
+  rest_red = 0;
+  rest_green = 255;                                                                               // When a network connection is made the GREEN LED stays on.
+  rest_blue = 0;
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
   {
     request->send_P(200, "text/html", index_html, processor);
@@ -553,6 +654,30 @@ void setup()
         Serial.println("password value updated");
         strncpy(configData.ss_password, svalueBuff, 20);
       }
+      if(setting == "endpointName")
+      {
+        Serial.println("Updating endpointName value");
+        char svalueBuff[50];
+        svalue.toCharArray(svalueBuff, 50);
+        Serial.println("endpointName value updated");
+        strncpy(configData.endpointName, svalueBuff, 50);
+      }
+      if(setting == "domain")
+      {
+        Serial.println("Updating domain value");
+        char svalueBuff[50];
+        svalue.toCharArray(svalueBuff, 50);
+        Serial.println("domain value updated");
+        strncpy(configData.domain, svalueBuff, 50);
+      }
+      if(setting == "protocol")
+      {
+        Serial.println("Updating protocol value");
+        char svalueBuff[10];
+        svalue.toCharArray(svalueBuff, 10);
+        Serial.println("protocol value updated");
+        strncpy(configData.protocol, svalueBuff, 10);
+      }
       if(setting == "socket_server_ip")
       {
         Serial.println("Updating socket_server_ip value");
@@ -569,23 +694,22 @@ void setup()
         Serial.println("socket_server_port value updated");
         strncpy(configData.socket_server_port, svalueBuff, 8);
       }
-      if(setting == "sensorURL")
+      if(setting == "endpointUrl")
       {
-        Serial.println("Updating sensorURL value");
+        Serial.println("Updating endpointUrl value");
         char svalueBuff[50];
         svalue.toCharArray(svalueBuff, 50);
-        Serial.println("sensorURL value updated");
-        strncpy(configData.sensorURL, svalueBuff, 50);
+        Serial.println("endpointUrl value updated");
+        strncpy(configData.endpointUrl, svalueBuff, 50);
       }
-      if(setting == "workerName")
+      if(setting == "poll_frequency")
       {
-        Serial.println("Updating workerName value");
-        char svalueBuff[50];
-        svalue.toCharArray(svalueBuff, 50);
-        Serial.println("workerName value updated");
-        strncpy(configData.workerName, svalueBuff, 50);
+        Serial.println("Updating poll_frequency value");
+        char svalueBuff[3];
+        svalue.toCharArray(svalueBuff, 3);
+        Serial.println("poll_frequency value updated");
+        strncpy(configData.poll_frequency, svalueBuff, 3);
       }
-
       
       EEPROM.put(addr,configData);
       EEPROM.commit();
@@ -595,10 +719,28 @@ void setup()
   /******************************************/
   server.begin();
   Serial.println("Web server started");
-  webSocket.begin(configData.socket_server_ip, 3200, configData.sensorURL);
+
+ // "www.jaysboat.com/websocket"
+ // "type/access/endpoint"
+
+  //webSocket.begin(configData.socket_server_ip,  atoi(configData.socket_server_port), configData.endpointName);
+  String fullEndpoint = strcat(configData.endpointUrl, configData.endpointName);
+  Serial.println("fullEndpoint: ");
+  Serial.println(fullEndpoint);
+  //webSocket.begin(configData.domain, atoi(configData.socket_server_port), fullEndpoint);
+  webSocket.begin("www.jaysboat.com", 80, "/websocket/type/access/endpoint");
+
 	webSocket.onEvent(webSocketEvent);
 	webSocket.setReconnectInterval(5000);
   Serial.println("Websocket started");
+}
+
+
+
+//////////////////
+
+String makeTempString(const char* part1, const char* part2) {
+  return String(part1) + String(part2);
 }
 
 /**************************************************************************************************************************************/
@@ -639,11 +781,42 @@ String generateSensorData()
 void loop() 
 {
   webSocket.loop();
-    String hold = generateSensorData();
-    webSocket.sendTXT(hold);
-  delay(150);
+
+  if (webSocket.isConnected()) 
+  {
+    int pollInterval = atoi(configData.poll_frequency) * 1000;  // e.g. "10" → 10 seconds
+    // If time since last send >= poll_interval → send a new message
+    if (millis() - lastSendTime >= pollInterval) 
+    {
+      String hold = generateSensorData();
+      
+      webSocket.sendTXT(hold);
+      flashRGB(0,0,255);
+
+      lastSendTime = millis();  // reset timer
+    }
+  
+  } 
+  else 
+  {
+    Serial.println("websocket not connected yet...");
+    flashRGB(255,0,0);
+  }
+  
+  
 }
 
+void flashRGB(int red, int green, int blue)
+{
+    analogWrite(PIN_RED,   red);
+    analogWrite(PIN_GREEN, green);
+    analogWrite(PIN_BLUE,  blue);
 
+    delay(100);  
+
+    analogWrite(PIN_RED,   rest_red);
+    analogWrite(PIN_GREEN, rest_green);
+    analogWrite(PIN_BLUE,  rest_blue);
+}
 
 
